@@ -405,5 +405,5 @@ void MX_FDCAN3_Init(void) {
 ---
 
 **文档版本**: v1.0
-**最后更新**: 2026-03-31
-**作者**: Claude Code Assistant
+**最后更新**: 2026-05-12
+**作者**: Zhang
