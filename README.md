@@ -49,63 +49,7 @@
 
 ## 2. 硬件配置
 
-### 2.1 主控制器 STM32H743VIT6
 
-#### 引脚定义
-
-**USB HS (ULPI接口)**:
-- PC0: STP
-- PC2: DIR
-- PC3: NXT
-- PA0: DATA0
-- PA5: CK
-- PB0: DATA1
-- PB1: DATA2
-- PB10: DATA3
-- PB11: DATA4
-- PB12: DATA5
-- PB13: DATA6
-- PB5: DATA7
-
-**FDCAN1**:
-- PD1: TX
-- PD0: RX
-
-**SPI1 Master**:
-- PA4: NSS (软件控制)
-- PA6: MISO
-- PA7: MOSI
-- PB3: SCK
-
-#### DMA配置
-- SPI1_TX: DMA1 Stream2
-- SPI1_RX: DMA1 Stream1
-
-### 2.2 从控制器 STM32G474RET6
-
-#### 引脚定义
-
-**FDCAN1**:
-- PA12: TX
-- PA11: RX
-
-**FDCAN2**:
-- PB13: TX
-- PB12: RX
-
-**FDCAN3**:
-- PA15: TX
-- PA8: RX
-
-**SPI1 Slave**:
-- PA4: NSS
-- PA5: SCK
-- PA6: MISO
-- PA7: MOSI
-
-#### DMA配置
-- SPI1_TX: DMA1 Channel2
-- SPI1_RX: DMA1 Channel1
 
 ## 3. 通信协议
 
@@ -443,7 +387,7 @@ void MX_FDCAN3_Init(void) {
 
 ## 11. 版本历史
 
-- **v1.0** (2026-03-31): 初始版本
+- **v1.0** (2026-04-31): 初始版本
   - 完成主从控制器架构设计
   - 实现USB HS CDC通信
   - 实现SPI主从通信
