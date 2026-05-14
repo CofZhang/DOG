@@ -38,8 +38,8 @@ typedef enum {
 // 从控制器状态
 typedef struct {
     uint8_t initialized;                        // 初始化标志
-    uint8_t spiRxComplete;                      // SPI接收完成标志
-    uint8_t spiTxComplete;                      // SPI发送完成标志
+    volatile uint8_t spiRxComplete;                      // SPI接收完成标志
+    volatile uint8_t spiTxComplete;                      // SPI发送完成标志
     SPIPacket_t spiRxPacket;                    // SPI接收缓冲区
     SPIFeedbackPacket_t spiFeedbackPacket;      // SPI反馈缓冲区
     uint8_t motorFeedbackRaw[9][8];             // 9个电机原始反馈数据（8字节）

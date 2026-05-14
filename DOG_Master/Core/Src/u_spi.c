@@ -12,6 +12,9 @@
 /* SPI发送缓冲区 */
 static uint8_t g_spi_tx_buffer[SPI_PKG_TOTAL_LEN];
 
+/* SPI接收缓冲区（全双工：接收从控的反馈数据） */
+static uint8_t g_spi_rx_buffer[SPI_PKG_TOTAL_LEN];
+ 
 /* SPI传输状态 */
 static volatile SPI_TransferState g_spi_state = SPI_STATE_IDLE;
 
@@ -88,12 +91,11 @@ uint8_t SPI_SendMotorControl(const MotorControlParam motor_params[12], uint8_t s
     /* 设置为忙状态 */
     g_spi_state = SPI_STATE_BUSY;
 
-    /* 通过DMA发送数据 */
-    /* ⚠️ 注意：如果SPI配置为16位模式，len参数应该是半字数量 */
-    /* 当前len=80字节，在16位模式下应该传输 len/2 = 40个半字 */
-    uint16_t transfer_len = len / 2;  // 16位模式：字节数 / 2 = 半字数
+    /* 通过DMA全双工收发（主控 TX = 控制指令，RX = 从控反馈） */
+    /* 8位模式：传输长度 = 字节数 */
+    uint16_t transfer_len = len;
 
-    if (HAL_SPI_Transmit_DMA(&hspi1, g_spi_tx_buffer, transfer_len) != HAL_OK) {
+    if (HAL_SPI_TransmitReceive_DMA(&hspi1, g_spi_tx_buffer, g_spi_rx_buffer, transfer_len) != HAL_OK) {
         g_spi_state = SPI_STATE_ERROR;
         return 0;
     }
@@ -128,10 +130,9 @@ void SPI_ErrorCallback(void)
 
 /* ==================== HAL回调函数重定向 ==================== */
 /**
- * @brief HAL SPI传输完成回调
- * @note 此函数会被HAL库自动调用
+ * @brief HAL SPI发送+接收完成回调（全双工 DMA 传输完成后调用）
  */
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     if (hspi->Instance == SPI1) {
         SPI_TxCpltCallback();

@@ -405,6 +405,31 @@
               <FilePath>..\Core\Src\Led_indicator.c</FilePath>
             </File>
             <File>
+              <FileName>fdcan_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\fdcan_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbcol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\usbcol.c</FilePath>
+            </File>
+            <File>
+              <FileName>u_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\u_spi.c</FilePath>
+            </File>
+            <File>
+              <FileName>system_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\system_control.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>
@@ -555,31 +580,6 @@
               <FileName>stm32h7xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32h7xx_hal_msp.c</FilePath>
-            </File>
-            <File>
-              <FileName>fdcan_handler.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\fdcan_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\motor.c</FilePath>
-            </File>
-            <File>
-              <FileName>usbcol.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\usbcol.c</FilePath>
-            </File>
-            <File>
-              <FileName>u_spi.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\u_spi.c</FilePath>
-            </File>
-            <File>
-              <FileName>system_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\system_control.c</FilePath>
             </File>
           </Files>
         </Group>
