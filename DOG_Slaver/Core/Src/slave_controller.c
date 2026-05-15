@@ -19,6 +19,7 @@
 
 // 全局从控制器状态
 static SlaveController_t g_slaveCtrl = {0};
+volatile uint32_t err =100;
 
 // 电机ID映射表（电机4-12）
 static const uint8_t MOTOR_ID_MAP[9] = {
@@ -28,7 +29,7 @@ static const uint8_t MOTOR_ID_MAP[9] = {
 };
 
 // FDCAN句柄映射表
-static FDCAN_HandleTypeDef* FDCAN_HANDLE_MAP[9] = {
+static FDCAN_HandleTypeDef* FDCAN_HANDLE_MAP[9] = { 
     &hfdcan1, &hfdcan1, &hfdcan1,   // 电机4-6 -> FDCAN1
     &hfdcan2, &hfdcan2, &hfdcan2,   // 电机7-9 -> FDCAN2
     &hfdcan3, &hfdcan3, &hfdcan3    // 电机10-12 -> FDCAN3
@@ -165,7 +166,14 @@ void SlaveController_SendMotorCommand(uint8_t motorIndex, const uint8_t* canData
 
     // 发送数据
     FDCAN_HandleTypeDef* hfdcan = FDCAN_HANDLE_MAP[motorIndex];
-    HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &txHeader, (uint8_t*)canData);
+    HAL_StatusTypeDef ret = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &txHeader, (uint8_t*)canData);
+  if (ret != HAL_OK) {
+      // 发送失败，记录错误
+      err = HAL_FDCAN_GetError(hfdcan);
+		uint32_t err2 = HAL_FDCAN_GetError(hfdcan);
+		  
+      
+  }
 }
 
 /**

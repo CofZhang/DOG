@@ -1,409 +1,271 @@
-# USB HS转四路FDCAN电机控制网关系统技术文档
+<div align="center">
 
-## 1. 系统概述
+# DOG — 12-Axis Motor Control Gateway
 
-本系统实现了一个高性能的USB HS转四路FDCAN电机控制网关，使用STM32H743VIT6作为主控制器，STM32G474RET6作为从控制器，可同时控制12个电机。
+**USB HS → 4× FDCAN 高性能电机控制网关系统**
 
-### 1.1 系统架构
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/CofZhang/DOG?style=social)](https://github.com/CofZhang/DOG/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/CofZhang/DOG?style=social)](https://github.com/CofZhang/DOG/network/members)
+![GitHub Views](https://komarev.com/ghpvc/?username=CofZhang&label=Profile%20Views&color=blue&style=flat)
+[![GitHub last commit](https://img.shields.io/github/last-commit/CofZhang/DOG)](https://github.com/CofZhang/DOG/commits/master)
+[![Platform](https://img.shields.io/badge/Platform-STM32H743%20%7C%20STM32G474-blue)](https://www.st.com/)
+[![Motor](https://img.shields.io/badge/Motor-EC--A6408--P2--25-green)](https://github.com/CofZhang/DOG)
 
-```
-┌─────────────────┐
-│  Jetson上位机   │
-│  (Python SDK)   │
-└────────┬────────┘
-         │ USB HS CDC (480Mbps)
-         │ 112字节数据包
-         ↓
-┌─────────────────────────────────────────┐
-│     主控制器 STM32H743VIT6              │
-│  ┌──────────────────────────────────┐   │
-│  │  USB CDC接收/发送                │   │
-│  │  数据包解析/打包                 │   │
-│  └──────────┬───────────────────────┘   │
-│             ├─→ FDCAN1 → 电机1,2,3      │
-│             │                            │
-│             └─→ SPI1 Master              │
-│                  ↓ 88字节数据包          │
-└──────────────────┼──────────────────────┘
-                   │
-┌──────────────────┼──────────────────────┐
-│                  ↓ SPI1 Slave            │
-│     从控制器 STM32G474RET6              │
-│  ┌──────────────────────────────────┐   │
-│  │  SPI数据接收/反馈                │   │
-│  │  FDCAN分发控制                   │   │
-│  └──────────┬───────────────────────┘   │
-│             ├─→ FDCAN1 → 电机4,5,6      │
-│             ├─→ FDCAN2 → 电机7,8,9      │
-│             └─→ FDCAN3 → 电机10,11,12   │
-└─────────────────────────────────────────┘
-```
-
-### 1.2 技术特性
-
-- **USB HS通信**: 理论速度480Mbps，实际可达1kHz控制频率
-- **12路电机控制**: 4路FDCAN总线，每路最多3个电机
-- **实时反馈**: 电机位置、速度、电流、温度实时回传
-- **安全保护**: 超时保护、数据校验、错误检测
-- **灵活配置**: 电机ID、波特率可配置
-
-## 2. 硬件配置
-
-
-
-## 3. 通信协议
-
-### 3.1 USB数据包格式（112字节）
-
-#### 控制指令包（Jetson → 主控）
-
-| 字节位置 | 字段名称 | 描述 |
-|---------|---------|------|
-| 0 | Header | 帧头标识，固定0xAA |
-| 1 | CmdType | 命令类型：0x10=电机控制，0x11=配置，0x12=查询 |
-| 2-3 | Length | 有效数据长度（大端序） |
-| 4 | Sequence | 序列号，用于应答匹配 |
-| 5 | Reserved | 保留字节 |
-| 6-13 | Motor1 | 电机1控制数据（8字节） |
-| 14-21 | Motor2 | 电机2控制数据（8字节） |
-| ... | ... | ... |
-| 94-101 | Motor12 | 电机12控制数据（8字节） |
-| 102-109 | Reserved | 保留字节（扩展用） |
-| 110 | Checksum | XOR校验和（字节0-109异或） |
-| 111 | Footer | 帧尾标识，固定0x55 |
-
-#### 反馈数据包（主控 → Jetson）
-
-格式与控制包相同，但电机数据字段为反馈数据。
-
-### 3.2 SPI数据包格式（88字节）
-
-#### 控制包（主控 → 从控）
-
-| 字节位置 | 字段名称 | 描述 |
-|---------|---------|------|
-| 0 | headerH | 帧头高字节 0xAA |
-| 1 | headerL | 帧头低字节 0x55 |
-| 2 | cmdType | 命令类型 |
-| 3 | sequence | 序列号 |
-| 4-75 | motorData[9][8] | 9个电机控制数据（电机4-12） |
-| 76-83 | reserved | 保留字节 |
-| 84 | checksumH | 校验和高字节 |
-| 85 | checksumL | 校验和低字节 |
-| 86 | footerH | 帧尾高字节 0x55 |
-| 87 | footerL | 帧尾低字节 0xAA |
-
-#### 反馈包（从控 → 主控）
-
-格式与控制包相同，但motorData字段为反馈数据。
-
-### 3.3 电机控制指令格式（8字节）
-
-#### 力位混控模式（CAN标准帧）
-
-**位域定义**（64位，高位在前Big-Endian）:
-
-| 位域 | 位数 | 描述 | 物理范围 | 换算公式 |
-|-----|------|------|---------|---------|
-| Bit63-61 | 3bit | 电机模式 | 固定0x00 | - |
-| Bit60-49 | 12bit | KP参数 | 0~5 | 物理值 = 原始值 ÷ 819 |
-| Bit48-40 | 9bit | KD参数 | 0~50 | 物理值 = 原始值 × 0.0978 |
-| Bit39-24 | 16bit | 期望位置 | -60~+60 rad | 物理值 = (原始值 ÷ 546.125) - 60 |
-| Bit23-12 | 12bit | 期望速度 | -60~+60 rad/s | 物理值 = (原始值 ÷ 34.125) - 60 |
-| Bit11-0 | 12bit | 前馈扭矩 | -60~+60 Nm | 物理值 = (原始值 ÷ 34.125) - 60 |
-
-**示例**: KP=1, KD=0.5, 位置=0rad, 速度=0rad/s, 扭矩=0Nm
-```
-对应8字节数据: 0x06 0x66 0x02 0xC0 0x00 0x80 0x08 0x00
-```
-
-### 3.4 电机反馈数据格式（8字节）
-
-**位域定义**（64位，高位在前）:
-
-| 位域 | 位数 | 描述 | 换算公式 |
-|-----|------|------|---------|
-| Bit63-61 | 3bit | 报文类型 | 固定0x01 |
-| Bit60-56 | 5bit | 错误码 | 见错误码表 |
-| Bit55-40 | 16bit | 实际位置 | 物理值 = (原始值 ÷ 546.125) - 60 |
-| Bit39-28 | 12bit | 实际速度 | 物理值 = (原始值 ÷ 34.125) - 60 |
-| Bit27-16 | 12bit | 实际电流 | A = (原始值/4095)×124 - 62 |
-| Bit15-8 | 8bit | 线圈温度 | ℃ = (原始值-50) ÷ 2 |
-| Bit7-0 | 8bit | MOS温度 | ℃ = (原始值-50) ÷ 2 |
-
-**错误码对照表**:
-
-| 错误码 | 描述 |
-|-------|------|
-| 0 | 正常 |
-| 1 | 过热 |
-| 2 | 过流 |
-| 3 | 电压过高 |
-| 4 | 电压过低 |
-| 5 | 编码器错误 |
-| 6 | 刹车电压异常 |
-| 7 | DRV驱动错误 |
-
-## 4. 电机ID配置
-
-### 4.1 ID映射表
-
-| 电机编号 | CAN ID | 控制器 | FDCAN总线 |
-|---------|--------|--------|----------|
-| 电机1 | 0x01 | 主控 | FDCAN1 |
-| 电机2 | 0x02 | 主控 | FDCAN1 |
-| 电机3 | 0x03 | 主控 | FDCAN1 |
-| 电机4 | 0x04 | 从控 | FDCAN1 |
-| 电机5 | 0x05 | 从控 | FDCAN1 |
-| 电机6 | 0x06 | 从控 | FDCAN1 |
-| 电机7 | 0x07 | 从控 | FDCAN2 |
-| 电机8 | 0x08 | 从控 | FDCAN2 |
-| 电机9 | 0x09 | 从控 | FDCAN2 |
-| 电机10 | 0x0A | 从控 | FDCAN3 |
-| 电机11 | 0x0B | 从控 | FDCAN3 |
-| 电机12 | 0x0C | 从控 | FDCAN3 |
-
-### 4.2 修改电机ID
-
-在`motor_protocol.h`中修改宏定义：
-
-```c
-// 主控FDCAN1电机
-#define MOTOR_ID_1       0x01
-#define MOTOR_ID_2       0x02
-#define MOTOR_ID_3       0x03
-
-// 从控FDCAN1电机
-#define MOTOR_ID_4       0x04
-// ... 以此类推
-```
-
-修改后需要重新编译主控和从控固件。
-
-## 5. FDCAN波特率配置
-
-### 5.1 当前配置
-
-**主控STM32H743**: 1Mbps（仲裁域和数据域）
-**从控STM32G474**: 1Mbps（仲裁域和数据域）
-
-### 5.2 修改方法
-
-#### 主控（fdcan.c）
-
-```c
-void MX_FDCAN1_Init(void) {
-    // ...
-    hfdcan1.Init.NominalPrescaler = 16;     // ← 修改此值
-    hfdcan1.Init.NominalSyncJumpWidth = 1;
-    hfdcan1.Init.NominalTimeSeg1 = 1;
-    hfdcan1.Init.NominalTimeSeg2 = 1;
-    // ...
-}
-```
-
-#### 从控（fdcan.c）
-
-```c
-void MX_FDCAN1_Init(void) {
-    // 同主控配置
-}
-void MX_FDCAN2_Init(void) {
-    // 同主控配置
-}
-void MX_FDCAN3_Init(void) {
-    // 同主控配置
-}
-```
-
-### 5.3 波特率计算
-
-```
-波特率 = FDCAN时钟 / (Prescaler × (1 + TimeSeg1 + TimeSeg2))
-```
-
-**注意**: 主控和从控的FDCAN时钟频率可能不同，需要分别计算。建议使用STM32CubeMX工具配置。
-
-## 6. 特殊指令
-
-### 6.1 全局指令（CAN ID = 0x7FF）
-
-#### 设置当前位置为零点
-
-```
-数据: 0x00 [电机ID] 0x00 0x03
-示例（电机ID=1）: 0x00 0x01 0x00 0x03
-```
-
-发送后需延迟500ms。
-
-#### 查询电机CAN ID
-
-```
-数据: 0xFF 0xFF 0x00 0x82
-```
-
-#### 重置电机CAN ID为1
-
-```
-数据: 0x7F 0x7F 0x00 0x05 0x7F 0x7F
-```
-
-#### 配置CAN超时时间
-
-```
-数据: 0xC0 0x0B [超时高字节] [超时低字节]
-示例（500ms）: 0xC0 0x0B 0x01 0xF4
-设置为0关闭超时保护
-```
-
-## 7. 安全机制
-
-### 7.1 超时保护
-
-- **电机侧**: 默认500ms无控制指令自动停止
-- **从控侧**: 1秒无主控数据自动发送零扭矩指令
-- **主控侧**: 建议实现USB超时检测
-
-### 7.2 数据校验
-
-- **USB数据包**: 8位XOR校验和
-- **SPI数据包**: 16位XOR校验和
-- **帧头帧尾**: 验证数据包完整性
-
-### 7.3 错误处理
-
-- CAN总线错误自动重传（可配置）
-- SPI通信错误自动重启接收
-- 电机错误码实时反馈
-
-## 8. 性能指标
-
-### 8.1 通信性能
-
-- **USB HS理论速度**: 480Mbps
-- **USB数据包大小**: 112字节
-- **建议控制频率**: 1kHz（每1ms发送一次）
-- **SPI通信速度**: 取决于主控配置，建议≥10Mbps
-- **FDCAN波特率**: 1Mbps（可配置）
-
-### 8.2 延迟分析
-
-```
-总延迟 = USB传输 + 主控处理 + SPI传输 + 从控处理 + FDCAN传输
-       ≈ 0.1ms + 0.05ms + 0.01ms + 0.05ms + 0.1ms
-       ≈ 0.31ms
-```
-
-实际延迟可能因系统负载而变化。
-
-## 9. 开发指南
-
-### 9.1 主控制器开发
-
-**核心文件**:
-- `motor_protocol.h/c`: 协议定义（主从共用）
-- `master_controller.h/c`: 主控逻辑（需要实现）
-- `usbd_cdc_if.c`: USB CDC接口
-
-**主要任务**:
-1. USB CDC数据接收和解析
-2. 电机1-3通过FDCAN1控制
-3. 电机4-12数据通过SPI发送到从控
-4. 接收从控SPI反馈并打包USB发送
-
-### 9.2 从控制器开发
-
-**核心文件**:
-- `motor_protocol.h/c`: 协议定义（主从共用）
-- `slave_controller.h/c`: 从控逻辑（已实现）
-- `main.c`: 主程序
-
-**主要任务**:
-1. SPI从机接收主控数据
-2. 解析并分发到FDCAN1/2/3
-3. 接收电机反馈
-4. 打包反馈数据通过SPI发送
-
-### 9.3 上位机开发
-
-**推荐语言**: Python 3.x
-
-**核心功能**:
-1. USB CDC虚拟串口通信
-2. 数据包打包和解析
-3. 电机控制指令生成
-4. 反馈数据解析和显示
-
-**示例代码**（见motor_controller.py）
-
-## 10. 调试和测试
-
-### 10.1 调试工具
-
-- **逻辑分析仪**: 监控SPI通信
-- **CAN分析仪**: 监控FDCAN总线
-- **USB分析仪**: 监控USB通信
-- **串口调试**: 添加UART输出调试信息
-
-### 10.2 测试步骤
-
-1. **单元测试**:
-   - 测试USB CDC通信
-   - 测试SPI主从通信
-   - 测试FDCAN收发
-
-2. **集成测试**:
-   - 测试主控→从控数据传输
-   - 测试电机控制指令发送
-   - 测试反馈数据回传
-
-3. **系统测试**:
-   - 测试12个电机同时控制
-   - 测试1kHz控制频率
-   - 测试超时保护机制
-
-### 10.3 常见问题排查
-
-#### USB无法识别
-- 检查USB HS PHY芯片供电
-- 检查ULPI接口连接
-- 确认VID/PID配置
-
-#### FDCAN无法通信
-- 检查波特率配置
-- 检查CAN收发器硬件
-- 确认终端电阻（120Ω）
-
-#### SPI通信异常
-- 检查时钟极性和相位
-- 检查NSS信号
-- 确认DMA配置
-
-#### 电机不响应
-- 检查电机ID配置
-- 检查FDCAN过滤器
-- 确认电机供电和使能
-
-## 11. 版本历史
-
-- **v1.0** (2026-04-31): 初始版本
-  - 完成主从控制器架构设计
-  - 实现USB HS CDC通信
-  - 实现SPI主从通信
-  - 实现4路FDCAN电机控制
-  - 实现电机反馈数据采集
-
-## 12. 参考资料
-
-- STM32H743参考手册 RM0433
-- STM32G474参考手册 RM0440
-- FDCAN应用笔记 AN5348
-- USB 2.0规范
-- EC-A6408-P2-25电机用户手册
+</div>
 
 ---
 
-**文档版本**: v1.0
-**最后更新**: 2026-05-12
-**作者**: Zhang
+## 简介
+
+DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实现了 USB HS → 4路 FDCAN 的实时控制链路，可同时驱动 **12 个关节电机**，控制频率达 **1KHz**。
+
+系统采用主从双 MCU 架构：
+- **主控 STM32H743**：接收上位机 USB 指令，直接控制 3 个电机，并通过 SPI 将剩余 9 个电机的指令转发给从机
+- **从控 STM32G474**：接收 SPI 数据，通过 3 路 FDCAN 独立控制 9 个电机
+
+---
+
+## 系统架构
+
+```
+┌─────────────────┐
+│  上位机 / Jetson │
+│  (Python SDK)   │
+└────────┬────────┘
+         │ USB HS CDC  480Mbps  164字节数据包
+         ↓
+┌──────────────────────────────────────────┐
+│          主控  STM32H743VIT6             │
+│                                          │
+│   USB CDC 接收/发送  ──→  数据包解析     │
+│                    ├──→ FDCAN1 → 电机 1,2,3  │
+│                    └──→ SPI1 Master ↓    │
+└──────────────────────┬───────────────────┘
+                       │ SPI  80字节数据包
+┌──────────────────────┴───────────────────┐
+│          从控  STM32G474RET6             │
+│                                          │
+│   SPI1 Slave 接收  ──→  数据分发         │
+│                    ├──→ FDCAN1 → 电机 4,5,6  │
+│                    ├──→ FDCAN2 → 电机 7,8,9  │
+│                    └──→ FDCAN3 → 电机 10,11,12 │
+└──────────────────────────────────────────┘
+```
+
+---
+
+## 特性
+
+- **12路同步控制**：4路 FDCAN 总线，每路最多 3 个电机，全部同步下发
+- **1kHz 控制频率**：USB HS 480Mbps，端到端延迟约 0.31ms
+- **力位混控模式**：支持位置、速度、前馈扭矩同时下发（MIT 协议）
+- **实时反馈**：位置、速度、电流、线圈温度、MOS 温度全量回传
+- **安全保护**：帧头帧尾校验 + XOR 校验和 + 超时自动停机
+- **Python SDK**：开箱即用的上位机数据包构建工具
+
+---
+
+## 硬件配置
+
+| 组件 | 型号 | 说明 |
+|------|------|------|
+| 主控 MCU | STM32H743VIT6 | USB HS + FDCAN1 + SPI Master |
+| 从控 MCU | STM32G474RET6 | SPI Slave + FDCAN1/2/3 |
+| 电机 | EC-A6408-P2-25 | 12个，MIT 协议 |
+| 上位机 | Jetson / PC | Python 3.x |
+
+### 电机 ID 映射
+
+| 电机 | CAN ID | 控制器 | FDCAN 总线 |
+|------|--------|--------|-----------|
+| 1 | 0x01 | 主控 | FDCAN1 |
+| 2 | 0x02 | 主控 | FDCAN1 |
+| 3 | 0x03 | 主控 | FDCAN1 |
+| 4 | 0x04 | 从控 | FDCAN1 |
+| 5 | 0x05 | 从控 | FDCAN1 |
+| 6 | 0x06 | 从控 | FDCAN1 |
+| 7 | 0x07 | 从控 | FDCAN2 |
+| 8 | 0x08 | 从控 | FDCAN2 |
+| 9 | 0x09 | 从控 | FDCAN2 |
+| 10 | 0x0A | 从控 | FDCAN3 |
+| 11 | 0x0B | 从控 | FDCAN3 |
+| 12 | 0x0C | 从控 | FDCAN3 |
+
+---
+
+## 通信协议
+
+### USB 数据包（164 字节）
+
+| 字节 | 字段 | 值 |
+|------|------|----|
+| 0 | 帧头 | 0xAA |
+| 1 | 命令类型 | 0x10 = 电机控制 |
+| 2~3 | 长度 | 大端序 |
+| 4 | 序列号 | 滚动计数 |
+| 5 | 保留 | 0x00 |
+| 6~101 | 电机数据 | 12 × 8 字节 |
+| 102~109 | 保留 | 扩展用 |
+| 110 | 校验和 | XOR(Byte 0~109) |
+| 111 | 帧尾 | 0x55 |
+
+### 电机控制指令（8 字节，MIT 协议）
+
+| 位域 | 位数 | 物理范围 | 换算 |
+|------|------|---------|------|
+| Bit63-61 | 3bit | 模式 0x00 | — |
+| Bit60-49 | 12bit | KP 0~500 | raw / 8.19 |
+| Bit48-40 | 9bit | KD 0~5 | raw × 0.00978 |
+| Bit39-24 | 16bit | 位置 ±12.5 rad | (raw/65535)×25 - 12.5 |
+| Bit23-12 | 12bit | 速度 ±18 rad/s | (raw/4095)×36 - 18 |
+| Bit11-0 | 12bit | 扭矩 ±30 Nm | (raw/4095)×60 - 30 |
+
+### 电机反馈数据（8 字节）
+
+| 位域 | 位数 | 说明 | 换算 |
+|------|------|------|------|
+| Bit63-61 | 3bit | 报文类型 0x01 | — |
+| Bit60-56 | 5bit | 错误码 | 见下表 |
+| Bit55-40 | 16bit | 实际位置 | (raw/65535)×25 - 12.5 rad |
+| Bit39-28 | 12bit | 实际速度 | (raw/4095)×36 - 18 rad/s |
+| Bit27-16 | 12bit | 实际电流 | raw×60/4095 - 30 A |
+| Bit15-8 | 8bit | 线圈温度 | (raw-50)/2 ℃ |
+| Bit7-0 | 8bit | MOS 温度 | (raw-50)/2 ℃ |
+
+**错误码**：0=正常，1=过热，2=过流，3=过压，4=欠压，5=编码器错误，6=刹车异常，7=DRV 驱动错误
+
+---
+
+## 快速开始
+
+### 1. 编译固件
+
+用 **Keil MDK** 分别打开并编译：
+
+```
+DOG_Master/MDK-ARM/DOG.uvprojx      # 主控固件
+DOG_Slaver/MDK-ARM/DOG_G.uvprojx    # 从控固件
+```
+
+### 2. 烧录
+
+通过 ST-Link 分别烧录主控和从控。
+
+### 3. 上位机控制
+
+```python
+from 电机控制例程.usb_packet_builder import build_usb_packet
+
+# 定义12个电机参数 [kp, kd, position, velocity, torque]
+motors = [
+    [10.0, 0.5, 0.0, 0.0, 0.0],  # 电机1
+    # ... 共12个
+]
+
+packet = build_usb_packet(motors, sequence=1)  # 返回164字节
+# 通过 USB CDC 虚拟串口发送 packet
+```
+
+### 4. 特殊指令
+
+```
+# 设置当前位置为零点（CAN ID = 0x7FF）
+数据: 0x00 [电机ID] 0x00 0x03
+
+# 配置超时时间（500ms）
+数据: 0xC0 0x0B 0x01 0xF4
+
+# 关闭超时保护
+数据: 0xC0 0x0B 0x00 0x00
+```
+
+---
+
+## 项目结构
+
+```
+DOG/
+├── DOG_Master/              # 主控固件 (STM32H743)
+│   └── Core/Src/
+│       ├── main.c           # 主程序
+│       ├── fdcan_handler.c  # FDCAN 收发
+│       ├── motor.c          # 电机协议编解码
+│       └── usbcol.c         # USB CDC 数据处理
+├── DOG_Slaver/              # 从控固件 (STM32G474)
+│   └── Core/Src/
+│       ├── main.c           # 主程序
+│       └── slave_controller.c  # SPI接收 + FDCAN分发
+└── 电机控制例程/
+    └── usb_packet_builder.py   # Python 上位机工具
+```
+
+---
+
+## 性能指标
+
+| 指标 | 数值 |
+|------|------|
+| 控制频率 | 1kHz |
+| USB 带宽 | 480Mbps (HS) |
+| 端到端延迟 | ~0.31ms |
+| FDCAN 波特率 | 1Mbps |
+| SPI 时钟 | ≥10MHz |
+| 电机数量 | 12 |
+
+---
+
+## 常见问题
+
+**USB 无法识别**：检查 USB HS PHY 供电、ULPI 接口连接、VID/PID 配置。
+
+**FDCAN 无法通信**：确认波特率一致、CAN 收发器正常、终端电阻 120Ω 已接。
+
+**SPI 通信异常**：检查时钟极性/相位、NSS 信号、DMA 对齐（Half Word）。
+
+**电机不响应**：确认电机 ID、FDCAN 过滤器配置、电机供电和使能状态。KD 不能为 0。
+
+---
+
+## 版本历史
+
+- **v1.0** (2026-05): 完成主从控制器架构，实现 USB FS + SPI + 4路 FDCAN 全链路控制
+
+---
+
+## 参考资料
+
+- STM32H743 参考手册 RM0433
+- STM32G474 参考手册 RM0440
+- FDCAN 应用笔记 AN5348
+- EC-A6408-P2-25 电机用户手册
+
+---
+
+## License
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+```
+MIT License
+
+Copyright (c) 2026 Zhang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

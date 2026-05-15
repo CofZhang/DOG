@@ -130,7 +130,7 @@ float Motor_Torque_RawToPhys(uint16_t torque_raw)
  * Bit11-0:  前馈扭矩，12bit
  */
 
-void Motor_PackControlData(const MotorControlParam *param, uint8_t *can_data)
+void Motor_PackControlData(const MotorControlParam *param, uint8_t *can_data) 
 {
     uint64_t bits = 0;
 

@@ -16,7 +16,7 @@ static volatile uint16_t g_rx_write_idx = 0;
 static volatile uint16_t g_rx_read_idx = 0; 
 
 /* 协议状态 */
-static volatile ProtocolState g_protocol_state = PROTOCOL_STATE_IDLE;
+static volatile ProtocolState g_protocol_state = PROTOCOL_STATE_IDLE; 
 
 /* 错误统计 */
 static struct {

@@ -37,7 +37,7 @@ void FDCAN_Handler_Init(void)
         Error_Handler();
     }
 
-    /* 启动FDCAN */
+    /* 启动FDCAN */ 
     if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
         Error_Handler();
     }
