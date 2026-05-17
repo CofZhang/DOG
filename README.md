@@ -2,7 +2,7 @@
 
 # DOG — 12-Axis Motor Control Gateway
 
-**USB HS → 4× FDCAN 高性能电机控制网关系统**
+**USB FS → 4× FDCAN 高性能电机控制网关系统**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/CofZhang/DOG?style=social)](https://github.com/CofZhang/DOG/stargazers)
