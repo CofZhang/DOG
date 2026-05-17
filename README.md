@@ -70,7 +70,7 @@ DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实
 
 | 组件 | 型号 | 说明 |
 |------|------|------|
-| 主控 MCU | STM32H743VIT6 | USB HS + FDCAN1 + SPI Master |
+| 主控 MCU | STM32H743VIT6 | USB FS + FDCAN1 + SPI Master |
 | 从控 MCU | STM32G474RET6 | SPI Slave + FDCAN1/2/3 |
 | 电机 | EC-A6408-P2-25 | 12个，MIT 协议 |
 | 上位机 | Jetson / PC | Python 3.x |
@@ -207,7 +207,7 @@ DOG/
 | 指标 | 数值 |
 |------|------|
 | 控制频率 | 1kHz |
-| USB 带宽 | 480Mbps (HS) |
+| USB 带宽 | 12Mbps (HS) |
 | 端到端延迟 | ~0.31ms |
 | FDCAN 波特率 | 1Mbps |
 | SPI 时钟 | ≥10MHz |
