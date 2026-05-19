@@ -190,41 +190,31 @@ uint16_t Protocol_PackFeedbackPkg(const MotorFeedback motor_feedback[], uint8_t 
     uint8_t *feedback_ptr = tx_data + 6;
 
     for (int i = 0; i < USB_PKG_MOTOR_CNT; i++) {
-        /* 这里需要将物理值转换为CAN原始值再打包 */
         MotorFeedback fb = motor_feedback[i];
 
-        /* 位置原始值 */
+        /* Byte0: 报文类型(bit7-5)=0x01, 错误码(bit4-0) */
+        feedback_ptr[i * 8 + 0] = (0x01 << 5) | (fb.error_code & 0x1F);
+
+        /* Byte1~2: Position uint16 */
         uint16_t pos_raw = Motor_Pos_PhysToRaw(fb.position);
+        feedback_ptr[i * 8 + 1] = (pos_raw >> 8) & 0xFF;
+        feedback_ptr[i * 8 + 2] = pos_raw & 0xFF;
 
-        /* 速度原始值 */
+        /* Byte3 + Byte4高4位: Velocity uint12 */
         uint16_t vel_raw = Motor_Vel_PhysToRaw(fb.velocity);
+        feedback_ptr[i * 8 + 3] = (vel_raw >> 4) & 0xFF;
 
-        /* 电流原始值: raw = (current + 30) / 60 * 4095 */
-        uint16_t current_raw = (uint16_t)((fb.current + 30.0f) / 60.0f * 4095.0f);
+        /* Byte4低4位 + Byte5: Current uint12, 范围 -60~+60A */
+        uint16_t current_raw = (uint16_t)((fb.current + 60.0f) / 120.0f * 4095.0f + 0.5f);
         if (current_raw > 4095) current_raw = 4095;
+        feedback_ptr[i * 8 + 4] = ((vel_raw & 0x0F) << 4) | ((current_raw >> 8) & 0x0F);
+        feedback_ptr[i * 8 + 5] = current_raw & 0xFF;
 
-        /* 温度原始值: raw = temperature * 2 + 50 */
-        uint8_t temp_raw = (uint8_t)(fb.temperature * 2.0f + 50.0f);
+        /* Byte6: MotorTemp, raw = 实际温度*2 + 50 */
+        feedback_ptr[i * 8 + 6] = (uint8_t)(fb.temperature * 2.0f + 50.0f);
 
-        /* 打包为8字节（反馈格式） */
-        uint64_t bits = 0;
-        bits |= ((uint64_t)0x01 & 0x07ULL) << 61;                  // 报文类型
-        bits |= ((uint64_t)fb.error_code & 0x1FULL) << 56;         // 错误码
-        bits |= ((uint64_t)pos_raw & 0xFFFFULL) << 40;             // 实际位置
-        bits |= ((uint64_t)vel_raw & 0xFFFULL) << 28;              // 实际速度
-        bits |= ((uint64_t)current_raw & 0xFFFULL) << 16;          // 实际电流
-        bits |= ((uint64_t)temp_raw & 0xFFULL) << 8;               // 温度
-        /* Bit7-0 未使用，保持0 */
-
-        /* Big-Endian输出 */
-        feedback_ptr[i * 8 + 0] = (bits >> 56) & 0xFF;
-        feedback_ptr[i * 8 + 1] = (bits >> 48) & 0xFF;
-        feedback_ptr[i * 8 + 2] = (bits >> 40) & 0xFF;
-        feedback_ptr[i * 8 + 3] = (bits >> 32) & 0xFF;
-        feedback_ptr[i * 8 + 4] = (bits >> 24) & 0xFF;
-        feedback_ptr[i * 8 + 5] = (bits >> 16) & 0xFF;
-        feedback_ptr[i * 8 + 6] = (bits >> 8) & 0xFF;
-        feedback_ptr[i * 8 + 7] = bits & 0xFF;
+        /* Byte7: MOSTemp, raw = 实际温度*2 + 50 */
+        feedback_ptr[i * 8 + 7] = (uint8_t)(fb.mos_temperature * 2.0f + 50.0f);
     }
 
     /* 计算校验和（Byte 0~109 异或，写入 Byte 110） */

@@ -7,6 +7,8 @@
 #include "system_control.h"
 #include "fdcan_handler.h"
 #include "led_indicator.h"
+#include "u_spi.h"
+#include "tim.h"
 #include <string.h>
 
 /* ==================== 私有变量 ==================== */
@@ -24,6 +26,16 @@ static uint8_t g_sequence = 0;
 
 /* 反馈发送计数器 */
 static uint32_t g_feedback_counter = 0;
+
+/* 调试计数器：统计每个电机CAN发送成功/失败次数 */
+volatile uint32_t g_can_tx_ok[3] = {0};
+volatile uint32_t g_can_tx_fail[3] = {0};
+
+/* TIM6驱动的CAN发送状态 */
+static volatile uint8_t g_can_tx_index = 0;    /* 当前待发电机索引 0~2 */
+static volatile uint8_t g_can_tx_pending = 0;  /* 是否有待发任务 */
+static volatile uint8_t g_can_tx_error = 0;    /* 本轮发送是否有错误 */
+static uint8_t g_can_tx_data[3][8];            /* 预打包的3帧CAN数据 */
 
 /* 外部FDCAN句柄（在fdcan.c中定义） */
 extern FDCAN_HandleTypeDef hfdcan1;
@@ -44,9 +56,12 @@ void System_Control_Init(void)
     memset(g_motor_params, 0, sizeof(g_motor_params));
     memset(g_motor_feedback, 0, sizeof(g_motor_feedback));
 
+    /* 启动TIM6，用于CAN帧间1ms延迟 */
+    HAL_TIM_Base_Start_IT(&htim6);
+
     /* 设置系统状态为空闲 */
     g_system_state = SYS_STATE_IDLE;
-} 
+}
 
 /* ==================== 系统主循环处理 ==================== */
 void System_Control_Process(void)
@@ -71,7 +86,6 @@ void System_ProcessMotorControl(void)
     ProtocolState state = Protocol_ReadPacket(g_motor_params, &g_sequence);
 
     if (state != PROTOCOL_STATE_COMPLETE) {
-        /* 解析失败，返回 */
         LED_Indicator_SetError(LED_IND_USB_ERROR, ERROR_LEVEL_WARNING);
         return;
     }
@@ -80,66 +94,81 @@ void System_ProcessMotorControl(void)
     g_system_state = SYS_STATE_RUNNING;
 
     /* ==================== 步骤1：通过SPI发送电机4-12的数据到从控 ==================== */
-    /* 发送电机4-12（索引3-11）的控制数据到从控 */ 
     if (SPI_SendMotorControl(g_motor_params, g_sequence) != 1) {
-        /* SPI发送失败 */
         LED_Indicator_SetError(LED_IND_SPI_ERROR, ERROR_LEVEL_ERROR);
     } else {
-        /* SPI发送成功 */
         LED_Indicator_Trigger(LED_IND_SPI_TX);
         LED_Indicator_ClearError(LED_IND_SPI_ERROR);
     }
 
-    /* ==================== 步骤2：通过主控FDCAN1直接控制电机1-3 ==================== */
-    /* 发送电机1-3的控制数据到FDCAN1 */
-    uint8_t fdcan_error_count = 0;
+    /* ==================== 步骤2：预打包电机1-3的CAN数据，交由TIM6中断逐帧发送 ==================== */
+    /* 等待上一轮发送完成（通常已完成，此处仅防止极端情况下覆盖） */
+    while (g_can_tx_pending);
 
     for (int i = 0; i < 3; i++) {
-        /* 打包CAN数据 */
-        uint8_t can_data[8];
-        Motor_PackControlData(&g_motor_params[i], can_data);
-
-        /* 获取电机CAN ID */
-        uint32_t master_id = Motor_GetMasterID(MOTOR_ID_1 + i);
-
-        /* 发送FDCAN消息 */
-        FDCAN_TxHeaderTypeDef tx_header;
-        tx_header.Identifier = master_id;
-        tx_header.IdType = FDCAN_STANDARD_ID;
-        tx_header.TxFrameType = FDCAN_DATA_FRAME;
-        tx_header.DataLength = FDCAN_DLC_BYTES_8;
-        tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-        tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-        tx_header.FDFormat = FDCAN_CLASSIC_CAN;
-        tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-        tx_header.MessageMarker = 0;
-
-        /* 发送数据 */
-        if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header, can_data) != HAL_OK) {
-            /* FDCAN发送失败 */
-            fdcan_error_count++;
-        }
+        Motor_PackControlData(&g_motor_params[i], g_can_tx_data[i]);
     }
 
-    /* 更新FDCAN状态指示 */
-    if (fdcan_error_count > 0) {
-        LED_Indicator_SetError(LED_IND_FDCAN_ERROR, ERROR_LEVEL_ERROR);
-    } else {
-        LED_Indicator_Trigger(LED_IND_FDCAN_TX);
-        LED_Indicator_ClearError(LED_IND_FDCAN_ERROR);
-    }
+    /* 触发TIM6驱动的发送序列：从电机1开始 */
+    g_can_tx_index = 0;
+    g_can_tx_error = 0;
+    g_can_tx_pending = 1;
 
     /* 增加反馈计数器 */
     g_feedback_counter++;
 }
 
+/* ==================== TIM6中断回调：每1ms发送一帧CAN ==================== */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM6) return;
+    if (!g_can_tx_pending) return;
+
+    uint8_t i = g_can_tx_index;
+
+    FDCAN_TxHeaderTypeDef tx_header;
+    tx_header.Identifier = Motor_GetMasterID(MOTOR_ID_1 + i);
+    tx_header.IdType = FDCAN_STANDARD_ID;
+    tx_header.TxFrameType = FDCAN_DATA_FRAME;
+    tx_header.DataLength = FDCAN_DLC_BYTES_8;
+    tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+    tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+    tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    tx_header.MessageMarker = 0;
+
+    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header, g_can_tx_data[i]) != HAL_OK) {
+        g_can_tx_fail[i]++;
+        g_can_tx_error = 1;
+    } else {
+        g_can_tx_ok[i]++;
+    }
+
+    g_can_tx_index++;
+
+    if (g_can_tx_index >= 3) {
+        /* 3帧全部发完 */
+        g_can_tx_pending = 0;
+
+        if (!g_can_tx_error) {
+            LED_Indicator_Trigger(LED_IND_FDCAN_TX);
+            LED_Indicator_ClearError(LED_IND_FDCAN_ERROR);
+        } else {
+            LED_Indicator_SetError(LED_IND_FDCAN_ERROR, ERROR_LEVEL_ERROR);
+        }
+    }
+}
+
 /* ==================== 发送反馈数据 ==================== */
 void System_SendFeedback(void)
 {
-    /* 从FDCAN处理模块获取所有电机反馈 */
+    /* 获取主控 FDCAN1 收到的电机1-3反馈 */
     FDCAN_GetAllMotorFeedback(g_motor_feedback);
 
-    /* 通过USB发送反馈数据 */
+    /* 获取从机 SPI 收到的电机4-12反馈，合并到索引3-11 */
+    SPI_GetSlaveFeedback(&g_motor_feedback[3]);
+
+    /* 通过USB发送12个电机的完整反馈数据 */
     Protocol_SendFeedback(g_motor_feedback, g_sequence);
 }
 
@@ -148,4 +177,3 @@ SystemState System_GetState(void)
 {
     return g_system_state;
 }
-

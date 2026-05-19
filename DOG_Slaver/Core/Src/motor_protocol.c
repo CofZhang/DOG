@@ -88,37 +88,26 @@ void MotorCommand_Unpack(const uint8_t* canData, MotorCommand_t* cmd) {
  * @param feedback 输出的电机反馈结构体
  */
 void MotorFeedback_Unpack(const uint8_t* canData, MotorFeedback_t* feedback) {
-    // 大端序解析
-    uint64_t data = 0;
-    data |= ((uint64_t)canData[0]) << 56;
-    data |= ((uint64_t)canData[1]) << 48;
-    data |= ((uint64_t)canData[2]) << 40;
-    data |= ((uint64_t)canData[3]) << 32;
-    data |= ((uint64_t)canData[4]) << 24;
-    data |= ((uint64_t)canData[5]) << 16;
-    data |= ((uint64_t)canData[6]) << 8;
-    data |= ((uint64_t)canData[7]);
+    // 协议格式：
+    // Byte0 bit7-5: 报文类型(3bit), bit4-0: 错误码(5bit)
+    // Byte1~2: Position uint16
+    // Byte3 + Byte4高4位: Velocity uint12
+    // Byte4低4位 + Byte5: Current uint12 (-60~+60A)
+    // Byte6: MotorTemp uint8
+    // Byte7: MOSTemp uint8
 
-    // 提取各字段
-    // Bit63-61: 报文类型 (固定0x01)
-    // Bit60-56: 错误码 (5bit)
-    // Bit55-40: 实际位置 (16bit)
-    // Bit39-28: 实际速度 (12bit)
-    // Bit27-16: 实际电流 (12bit)
-    // Bit15-8:  温度 (8bit)
-    // Bit7-0:   未使用
+    feedback->errorCode = canData[0] & 0x1F;
 
-    feedback->errorCode = (data >> 56) & 0x1F;
-    uint16_t pos_raw     = (data >> 40) & 0xFFFF;
-    uint16_t vel_raw     = (data >> 28) & 0xFFF;
-    uint16_t current_raw = (data >> 16) & 0xFFF;
-    uint8_t  temp_raw    = (data >> 8) & 0xFF;
+    uint16_t pos_raw = ((uint16_t)canData[1] << 8) | canData[2];
+    feedback->position = Position_RawToPhysical(pos_raw);
 
-    // 转换为物理值
-    feedback->position    = Position_RawToPhysical(pos_raw);
-    feedback->velocity    = Velocity_RawToPhysical(vel_raw);
-    feedback->current     = Current_RawToPhysical(current_raw);
-    feedback->temperature = Temperature_RawToPhysical(temp_raw);
+    uint16_t vel_raw = ((uint16_t)canData[3] << 4) | (canData[4] >> 4);
+    feedback->velocity = Velocity_RawToPhysical(vel_raw);
+
+    uint16_t current_raw = (((uint16_t)canData[4] & 0x0F) << 8) | canData[5];
+    feedback->current = current_raw * 120.0f / 4095.0f - 60.0f;
+
+    feedback->temperature = (canData[6] - 50) / 2.0f;
 }
 
 /**

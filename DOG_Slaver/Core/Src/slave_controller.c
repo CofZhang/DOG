@@ -29,7 +29,7 @@ static const uint8_t MOTOR_ID_MAP[9] = {
 };
 
 // FDCAN句柄映射表
-static FDCAN_HandleTypeDef* FDCAN_HANDLE_MAP[9] = { 
+static FDCAN_HandleTypeDef* FDCAN_HANDLE_MAP[9] = {
     &hfdcan1, &hfdcan1, &hfdcan1,   // 电机4-6 -> FDCAN1
     &hfdcan2, &hfdcan2, &hfdcan2,   // 电机7-9 -> FDCAN2
     &hfdcan3, &hfdcan3, &hfdcan3    // 电机10-12 -> FDCAN3
@@ -115,26 +115,20 @@ void SlaveController_Init(void) {
     }
 
     // ==================== SPI初始化 ====================
-    // STM32G4 HAL Slave 模式：HAL_SPI_Receive_DMA 内部会同时启动 TX DMA（发送 dummy 数据）
-    // 和 RX DMA（接收主控数据）。我们在调用前先把反馈包填入 TX 缓冲区，
-    // 然后手动将 TX DMA 的源地址指向反馈包，这样 MISO 上发出的就是真实反馈数据。
-    uint16_t spi_length = sizeof(SPIPacket_t);  // 80 字节（8bit模式）
+    uint16_t spi_length = sizeof(SPIPacket_t);  // 80 字节
 
-    // 预先准备初始反馈包
+    // 预先准备初始反馈包（作为第一次传输的 TX 数据）
     SlaveController_PrepareFeedbackPacket();
 
-    // 启动 RX DMA，清除OVR等错误标志确保HAL状态为READY
+    // 全双工 DMA：TX = 反馈包，RX = 控制包
     __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
     hspi1.ErrorCode = HAL_SPI_ERROR_NONE;
-    if (HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)&g_slaveCtrl.spiRxPacket, spi_length) != HAL_OK) {
+    if (HAL_SPI_TransmitReceive_DMA(&hspi1,
+            (uint8_t*)&g_slaveCtrl.spiFeedbackPacket,
+            (uint8_t*)&g_slaveCtrl.spiRxPacket,
+            spi_length) != HAL_OK) {
         Error_Handler();
     }
-
-    // 然后重定向 TX DMA 源地址到反馈包（覆盖 HAL 设置的 dummy 地址）
-    // 这样 MISO 线上发出的是真实反馈数据而不是 0xFF
-    hspi1.hdmatx->Instance->CMAR = (uint32_t)&g_slaveCtrl.spiFeedbackPacket;
-    // 确保 TX DMA 内存地址自增（HAL_SPI_Receive_DMA 会关闭 MINC，需要重新打开）
-    hspi1.hdmatx->Instance->CCR |= DMA_CCR_MINC;
 
     // 标记初始化完成
     g_slaveCtrl.initialized = 1;
@@ -171,8 +165,8 @@ void SlaveController_SendMotorCommand(uint8_t motorIndex, const uint8_t* canData
       // 发送失败，记录错误
       err = HAL_FDCAN_GetError(hfdcan);
 		uint32_t err2 = HAL_FDCAN_GetError(hfdcan);
-		  
-      
+
+
   }
 }
 
@@ -242,9 +236,10 @@ void SlaveController_Process(void) {
         hspi1.State = HAL_SPI_STATE_READY;
         g_slaveCtrl.spiRxComplete = 0;
         uint16_t spi_length = sizeof(SPIPacket_t);
-        HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)&g_slaveCtrl.spiRxPacket, spi_length);
-        hspi1.hdmatx->Instance->CMAR = (uint32_t)&g_slaveCtrl.spiFeedbackPacket;
-        hspi1.hdmatx->Instance->CCR |= DMA_CCR_MINC;
+        HAL_SPI_TransmitReceive_DMA(&hspi1,
+            (uint8_t*)&g_slaveCtrl.spiFeedbackPacket,
+            (uint8_t*)&g_slaveCtrl.spiRxPacket,
+            spi_length);
     }
 
     // 检查SPI接收完成
@@ -262,13 +257,13 @@ void SlaveController_Process(void) {
         __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
         hspi1.ErrorCode = HAL_SPI_ERROR_NONE;
         hspi1.State = HAL_SPI_STATE_READY;
-        uint16_t spi_length = sizeof(SPIPacket_t);  // 80 字节（8bit模式）
-        if (HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)&g_slaveCtrl.spiRxPacket, spi_length) != HAL_OK) {
+        uint16_t spi_length = sizeof(SPIPacket_t);
+        if (HAL_SPI_TransmitReceive_DMA(&hspi1,
+                (uint8_t*)&g_slaveCtrl.spiFeedbackPacket,
+                (uint8_t*)&g_slaveCtrl.spiRxPacket,
+                spi_length) != HAL_OK) {
             Error_Handler();
         }
-        // 重定向 TX DMA 源地址到反馈包，并开启内存地址自增
-        hspi1.hdmatx->Instance->CMAR = (uint32_t)&g_slaveCtrl.spiFeedbackPacket;
-        hspi1.hdmatx->Instance->CCR |= DMA_CCR_MINC;
     }
 
     // 超时保护：如果超过1秒没有收到数据，停止所有电机
@@ -329,9 +324,9 @@ void SlaveController_FDCAN_RxCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFi
 
 // ==================== HAL回调函数重定向 ====================
 /**
- * @brief SPI 接收完成回调（HAL_SPI_Receive_DMA 完成时触发）
+ * @brief SPI 全双工传输完成回调（HAL_SPI_TransmitReceive_DMA 完成时触发）
  */
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
     if (hspi->Instance == SPI1) {
         SlaveController_SPI_RxCpltCallback();
     }

@@ -14,9 +14,12 @@ static uint8_t g_spi_tx_buffer[SPI_PKG_TOTAL_LEN];
 
 /* SPI接收缓冲区（全双工：接收从控的反馈数据） */
 static uint8_t g_spi_rx_buffer[SPI_PKG_TOTAL_LEN];
- 
+
 /* SPI传输状态 */
 static volatile SPI_TransferState g_spi_state = SPI_STATE_IDLE;
+
+/* 从机9个电机反馈缓存（电机4-12，索引0-8） */
+static MotorFeedback g_slave_feedback[SPI_PKG_MOTOR_CNT];
 
 /* 外部SPI句柄（在spi.c中定义） */
 extern SPI_HandleTypeDef hspi1;
@@ -111,12 +114,41 @@ SPI_TransferState SPI_GetTransferState(void)
 
 /* ==================== SPI回调函数 ==================== */
 /**
- * @brief SPI传输完成回调
- * @note 此函数应在HAL_SPI_TxCpltCallback中调用
+ * @brief SPI传输完成回调，解析从机反馈包
  */
 void SPI_TxCpltCallback(void)
 {
     g_spi_state = SPI_STATE_IDLE;
+
+    /* 验证从机反馈包帧头和帧尾 */
+    if (g_spi_rx_buffer[0] != SPI_PKG_HEADER ||
+        g_spi_rx_buffer[SPI_PKG_TOTAL_LEN - 1] != SPI_PKG_FOOTER) {
+        return;
+    }
+
+    /* 验证校验和（Byte 0 ~ SPI_PKG_TOTAL_LEN-3 异或，与 SPI_PKG_TOTAL_LEN-2 比较） */
+    uint8_t checksum = 0;
+    for (uint16_t i = 0; i < SPI_PKG_TOTAL_LEN - 2; i++) {
+        checksum ^= g_spi_rx_buffer[i];
+    }
+    if (checksum != g_spi_rx_buffer[SPI_PKG_TOTAL_LEN - 2]) {
+        return;
+    }
+
+    /* 解析9个电机反馈数据（从 Byte6 开始，每个电机8字节） */
+    const uint8_t *motor_data_ptr = g_spi_rx_buffer + SPI_PKG_HEADER_LEN;
+    for (int i = 0; i < SPI_PKG_MOTOR_CNT; i++) {
+        Motor_UnpackFeedbackData(motor_data_ptr + i * 8, &g_slave_feedback[i]);
+    }
+}
+
+/**
+ * @brief 获取从机电机反馈数据
+ * @param feedback_out 输出数组，9个电机（电机4-12）
+ */
+void SPI_GetSlaveFeedback(MotorFeedback feedback_out[SPI_PKG_MOTOR_CNT])
+{
+    memcpy(feedback_out, g_slave_feedback, sizeof(g_slave_feedback));
 }
 
 /**

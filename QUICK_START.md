@@ -302,28 +302,129 @@ from matplotlib.animation import FuncAnimation
 - 监控电机温度和电流
 - 实现错误恢复机制
 
-## 9. 技术支持
+## 9. 电机反馈数据说明
 
-### 9.1 文档
+### 9.1 反馈数据结构
+
+每个电机的反馈数据解析后存储在 `MotorFeedback` 结构体中，包含以下物理值：
+
+| 字段 | 类型 | 单位 | 范围 | 说明 |
+|------|------|------|------|------|
+| `error_code` | uint8 | — | 0~7 | 错误码，0=正常 |
+| `position` | float | rad | -12.5 ~ +12.5 | 实际位置 |
+| `velocity` | float | rad/s | -18 ~ +18 | 实际速度 |
+| `current` | float | A | -60 ~ +60 | 实际电流 |
+| `temperature` | float | ℃ | — | 电机温度 |
+| `mos_temperature` | float | ℃ | — | MOS管温度 |
+
+错误码定义：
+
+| 值 | 含义 |
+|----|------|
+| 0 | 无错误 |
+| 1 | 电机过热 |
+| 2 | 电机过流 |
+| 3 | 母线过压 |
+| 4 | 母线欠压 |
+| 5 | 编码器错误 |
+| 6 | 刹车电压过高 |
+| 7 | DRV驱动错误 |
+
+### 9.2 反馈数据流向
+
+```
+电机(CAN反馈帧)
+    │
+    ├─ 电机1-3 ──→ 主控 FDCAN1 接收中断
+    │               └─ Motor_UnpackFeedbackData()
+    │               └─ g_motor_feedback[0~2]（主控 fdcan_handler.c）
+    │
+    └─ 电机4-12 ─→ 从控 FDCAN1/2/3 接收中断
+                    └─ memcpy 原始8字节 → motorFeedbackRaw[9][8]
+                    └─ SPI 透传给主控（SPIFeedbackPacket_t）
+                    └─ 主控 SPI_TxCpltCallback() 解析
+                    └─ g_slave_feedback[0~8]（主控 u_spi.c）
+
+最终合并：
+    System_SendFeedback() 每10帧调用一次
+    → g_motor_feedback[0~2]  （电机1-3，主控FDCAN直接收）
+    → g_motor_feedback[3~11] （电机4-12，从控SPI回传）
+    → Protocol_PackFeedbackPkg() 打包 → USB 发给上位机
+```
+
+### 9.3 Keil 调试观察反馈数据
+
+**主控（STM32H743）调试时：**
+
+在 Watch 窗口输入以下表达式可直接查看物理值：
+
+```
+system_control\g_motor_feedback
+```
+
+展开后可看到12个电机的完整反馈，例如：
+
+```
+g_motor_feedback[0].position        // 电机1 位置 (rad)
+g_motor_feedback[0].velocity        // 电机1 速度 (rad/s)
+g_motor_feedback[0].current         // 电机1 电流 (A)
+g_motor_feedback[0].temperature     // 电机1 电机温度 (℃)
+g_motor_feedback[0].mos_temperature // 电机1 MOS温度 (℃)
+g_motor_feedback[0].error_code      // 电机1 错误码
+
+g_motor_feedback[3].position        // 电机4 位置（从机回传）
+...
+g_motor_feedback[11].position       // 电机12 位置（从机回传）
+```
+
+> 注意：`g_motor_feedback` 是 `static` 变量，Watch 窗口需要加模块限定符 `system_control\g_motor_feedback`，或者在该变量所在文件（`system_control.c`）中Protocol_SendFeedback(g_motor_feedback, g_sequence); 147行打断点后直接输入变量名。
+
+**从控（STM32G474）调试时：**
+
+从控只保存原始8字节，不解析物理值：
+
+```
+slave_controller\g_slaveCtrl.motorFeedbackRaw
+```
+
+`motorFeedbackRaw[0]` 对应电机4，`motorFeedbackRaw[8]` 对应电机12，每个元素是8字节原始CAN数据，需要手动按协议解析。
+
+**SPI 从机反馈缓存（主控侧）：**
+
+```
+u_spi\g_slave_feedback
+```
+
+这是主控解析完从机 SPI 反馈后的物理值缓存，索引0对应电机4，索引8对应电机12。
+
+### 9.4 反馈更新频率
+
+- 主控 FDCAN 反馈：实时更新（中断驱动）
+- 从控 SPI 反馈：每次 SPI 全双工传输完成后更新，与控制指令同步
+- USB 上报频率：每10次控制指令发送一次反馈（`g_feedback_counter >= 10`）
+
+## 10. 技术支持
+
+### 10.1 文档
 
 - `SYSTEM_DOCUMENTATION.md` - 完整系统文档
 - `README_SLAVE.md` - 从控制器说明
 - 代码注释
 
-### 9.2 调试工具
+### 10.2 调试工具
 
 - STM32CubeIDE调试器
 - 逻辑分析仪（SPI/CAN）
 - CAN分析仪
 - USB分析仪
 
-### 9.3 社区资源
+### 10.3 社区资源
 
 - STM32官方论坛
 - GitHub Issues
 - 电机厂商技术支持
 
-## 10. 下一步
+## 11. 下一步
 
 完成基础测试后，可以：
 

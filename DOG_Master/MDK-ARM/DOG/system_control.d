@@ -54,4 +54,5 @@ dog\system_control.o: ../Core/Inc/u_spi.h
 dog\system_control.o: ../Core/Inc/fdcan_handler.h
 dog\system_control.o: ../Core/Inc/led_indicator.h
 dog\system_control.o: ../Core/Inc/led.h
+dog\system_control.o: ../Core/Inc/tim.h
 dog\system_control.o: D:\AA_Keil5\ARM\ARMCC\Bin\..\include\string.h

@@ -27,7 +27,7 @@
 #include "usb_device.h"
 #include "gpio.h"
 
-/* Private includes ----------------------------------------------------------*/ 
+/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "led.h"
 #include "system_control.h"
@@ -114,6 +114,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_ADC1_Init();
   MX_TIM17_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 	LED_Indicator_TestMode();
 

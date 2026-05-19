@@ -122,12 +122,13 @@ typedef struct {
 
 /* 电机反馈状态结构体 */
 typedef struct {
-    uint8_t error_code;   // 错误码
-    float position;       // 实际位置，rad
-    float velocity;       // 实际速度，rad/s
-    float current;        // 实际电流，A (-30~+30)
-    float temperature;    // 温度，℃
-    uint32_t timestamp;   // 时间戳
+    uint8_t error_code;    // 错误码
+    float position;        // 实际位置，rad
+    float velocity;        // 实际速度，rad/s
+    float current;         // 实际电流，A (-60~+60)
+    float temperature;     // 电机温度，℃
+    float mos_temperature; // MOS温度，℃
+    uint32_t timestamp;    // 时间戳
 } MotorFeedback;
 
 /* USB控制数据包结构体 */

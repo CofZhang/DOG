@@ -204,54 +204,39 @@ void Motor_UnpackControlData(const uint8_t *can_data, MotorControlParam *param)
     param->torque = Motor_Torque_RawToPhys(torque_raw);
 }
 
-/* ==================== 电机反馈数据解包函数 ==================== */
-/* 反馈报文位域定义（64位，Big-Endian）：
- * Bit63-61: 报文类型(ack_status)，3bit，固定0x01
- * Bit60-56: 错误码，5bit
- * Bit55-40: 实际位置，16bit
- * Bit39-28: 实际速度，12bit
- * Bit27-16: 实际电流，12bit
- * Bit15-8:  温度，8bit
- * Bit7-0:   未使用（填0）
+/* ==================== 电机反馈数据解包函数 ====================
+ * 反馈帧位域定义（按协议逐字节）：
+ * Byte0 bit7-5: 报文类型 Type（3bit），0x01=控制反馈报文1
+ * Byte0 bit4-0: 错误码 Error（5bit）
+ * Byte1~2:      Position uint16（0~65535 对应 -12.5~+12.5 rad）
+ * Byte3 + Byte4高4位: Velocity uint12（0~4095 对应 -18~+18 rad/s）
+ * Byte4低4位 + Byte5: Current uint12（0~4095 对应 -60~+60 A）
+ * Byte6:        MotorTemp uint8（raw = 实际温度*2 + 50）
+ * Byte7:        MOSTemp uint8（raw = 实际温度*2 + 50）
  */
 
 void Motor_UnpackFeedbackData(const uint8_t *can_data, MotorFeedback *feedback)
 {
-    uint64_t bits = 0;
+    /* 错误码 (Byte0 bit4-0, 5bit) */
+    feedback->error_code = can_data[0] & 0x1F;
 
-    /* 从8字节Big-Endian解析 */
-    bits |= ((uint64_t)can_data[0]) << 56;
-    bits |= ((uint64_t)can_data[1]) << 48;
-    bits |= ((uint64_t)can_data[2]) << 40;
-    bits |= ((uint64_t)can_data[3]) << 32;
-    bits |= ((uint64_t)can_data[4]) << 24;
-    bits |= ((uint64_t)can_data[5]) << 16;
-    bits |= ((uint64_t)can_data[6]) << 8;
-    bits |= ((uint64_t)can_data[7]) << 0;
-
-    /* 解析各字段 */
-    /* 报文类型 (Bit63-61, 3bit) - 验证是否为0x01 */
-    uint8_t msg_type = (bits >> 61) & 0x07ULL;
-	(void)msg_type;
-
-    /* 错误码 (Bit60-56, 5bit) */
-    feedback->error_code = (bits >> 56) & 0x1FULL;
-
-    /* 实际位置 (Bit55-40, 16bit) */
-    uint16_t pos_raw = (bits >> 40) & 0xFFFFULL;
+    /* 实际位置 (Byte1~2, 16bit) */
+    uint16_t pos_raw = ((uint16_t)can_data[1] << 8) | can_data[2];
     feedback->position = Motor_Pos_RawToPhys(pos_raw);
 
-    /* 实际速度 (Bit39-28, 12bit) */
-    uint16_t vel_raw = (bits >> 28) & 0xFFFULL;
+    /* 实际速度 (Byte3 + Byte4高4位, 12bit) */
+    uint16_t vel_raw = ((uint16_t)can_data[3] << 4) | (can_data[4] >> 4);
     feedback->velocity = Motor_Vel_RawToPhys(vel_raw);
 
-    /* 实际电流 (Bit27-16, 12bit): phys = raw / 4095 * 60 - 30 (A, 范围 -30~+30) */
-    uint16_t current_raw = (bits >> 16) & 0xFFFULL;
-    feedback->current = current_raw * 60.0f / 4095.0f - 30.0f;
+    /* 实际电流 (Byte4低4位 + Byte5, 12bit): phys = raw / 4095 * 120 - 60 (A, 范围 -60~+60) */
+    uint16_t current_raw = (((uint16_t)can_data[4] & 0x0F) << 8) | can_data[5];
+    feedback->current = current_raw * 120.0f / 4095.0f - 60.0f;
 
-    /* 温度 (Bit15-8, 8bit): ℃ = (原始值 - 50) / 2 */
-    uint8_t temp_raw = (bits >> 8) & 0xFFULL;
-    feedback->temperature = (temp_raw - 50) / 2.0f;
+    /* 电机温度 (Byte6, 8bit): ℃ = (raw - 50) / 2 */
+    feedback->temperature = (can_data[6] - 50) / 2.0f;
+
+    /* MOS温度 (Byte7, 8bit): ℃ = (raw - 50) / 2 */
+    feedback->mos_temperature = (can_data[7] - 50) / 2.0f;
 }
 
 /* ==================== 电机ID辅助函数 ==================== */
