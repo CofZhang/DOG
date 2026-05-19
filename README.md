@@ -2,7 +2,7 @@
 
 # DOG — 12-Axis Motor Control Gateway
 
-**USB HS → 4× FDCAN 高性能电机控制网关系统**
+**USB FS → 4× FDCAN 高性能电机控制网关系统**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/CofZhang/DOG?style=social)](https://github.com/CofZhang/DOG/stargazers)
@@ -18,7 +18,7 @@
 
 ## 简介
 
-DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实现了 USB HS → 4路 FDCAN 的实时控制链路，可同时驱动 **12 个关节电机**，控制频率达 **1KHz**。
+DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实现了 USB FS → 4路 FDCAN 的实时控制链路，可同时驱动 **12 个关节电机**，控制频率达 **1KHz**。
 
 系统采用主从双 MCU 架构：
 - **主控 STM32H743**：接收上位机 USB 指令，直接控制 3 个电机，并通过 SPI 将剩余 9 个电机的指令转发给从机
@@ -33,7 +33,7 @@ DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实
 │  上位机 / Jetson │
 │  (Python SDK)   │
 └────────┬────────┘
-         │ USB HS CDC  480Mbps  164字节数据包
+         │ USB FS CDC  12Mbps  164字节数据包
          ↓
 ┌──────────────────────────────────────────┐
 │          主控  STM32H743VIT6             │
@@ -58,7 +58,7 @@ DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实
 ## 特性
 
 - **12路同步控制**：4路 FDCAN 总线，每路最多 3 个电机，全部同步下发
-- **1kHz 控制频率**：USB HS 480Mbps，端到端延迟约 0.31ms
+- **1kHz 控制频率**：USB FS 12Mbps，端到端延迟约 0.31ms
 - **力位混控模式**：支持位置、速度、前馈扭矩同时下发（MIT 协议）
 - **实时反馈**：位置、速度、电流、线圈温度、MOS 温度全量回传
 - **安全保护**：帧头帧尾校验 + XOR 校验和 + 超时自动停机
@@ -70,7 +70,7 @@ DOG 是一个面向四足机器人的**高性能电机控制网关系统**，实
 
 | 组件 | 型号 | 说明 |
 |------|------|------|
-| 主控 MCU | STM32H743VIT6 | USB HS + FDCAN1 + SPI Master |
+| 主控 MCU | STM32H743VIT6 | USB FS + FDCAN1 + SPI Master |
 | 从控 MCU | STM32G474RET6 | SPI Slave + FDCAN1/2/3 |
 | 电机 | EC-A6408-P2-25 | 12个，MIT 协议 |
 | 上位机 | Jetson / PC | Python 3.x |
@@ -207,7 +207,7 @@ DOG/
 | 指标 | 数值 |
 |------|------|
 | 控制频率 | 1kHz |
-| USB 带宽 | 480Mbps (HS) |
+| USB 带宽 | 12Mbps (HS) |
 | 端到端延迟 | ~0.31ms |
 | FDCAN 波特率 | 1Mbps |
 | SPI 时钟 | ≥10MHz |
@@ -217,7 +217,6 @@ DOG/
 
 ## 常见问题
 
-**USB 无法识别**：检查 USB HS PHY 供电、ULPI 接口连接、VID/PID 配置。
 
 **FDCAN 无法通信**：确认波特率一致、CAN 收发器正常、终端电阻 120Ω 已接。
 
