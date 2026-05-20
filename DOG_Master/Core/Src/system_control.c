@@ -35,6 +35,7 @@ volatile uint32_t g_can_tx_fail[3] = {0};
 static volatile uint8_t g_can_tx_index = 0;    /* 当前待发电机索引 0~2 */
 static volatile uint8_t g_can_tx_pending = 0;  /* 是否有待发任务 */
 static volatile uint8_t g_can_tx_error = 0;    /* 本轮发送是否有错误 */
+static volatile uint8_t g_can_tx_delay_cnt = 0; /* ID3发送前的延迟计数（0.1ms×5=0.5ms） */
 static uint8_t g_can_tx_data[3][8];            /* 预打包的3帧CAN数据 */
 
 /* 外部FDCAN句柄（在fdcan.c中定义） */
@@ -118,16 +119,11 @@ void System_ProcessMotorControl(void)
     g_feedback_counter++;
 }
 
-/* ==================== TIM6中断回调：每1ms发送一帧CAN ==================== */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+/* ==================== 发送单帧CAN辅助函数 ==================== */
+static void CAN_SendFrame(uint8_t motor_index)
 {
-    if (htim->Instance != TIM6) return;
-    if (!g_can_tx_pending) return;
-
-    uint8_t i = g_can_tx_index;
-
     FDCAN_TxHeaderTypeDef tx_header;
-    tx_header.Identifier = Motor_GetMasterID(MOTOR_ID_1 + i);
+    tx_header.Identifier = Motor_GetMasterID(MOTOR_ID_1 + motor_index);
     tx_header.IdType = FDCAN_STANDARD_ID;
     tx_header.TxFrameType = FDCAN_DATA_FRAME;
     tx_header.DataLength = FDCAN_DLC_BYTES_8;
@@ -137,17 +133,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     tx_header.MessageMarker = 0;
 
-    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header, g_can_tx_data[i]) != HAL_OK) {
-        g_can_tx_fail[i]++;
+    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &tx_header, g_can_tx_data[motor_index]) != HAL_OK) {
+        g_can_tx_fail[motor_index]++;
         g_can_tx_error = 1;
     } else {
-        g_can_tx_ok[i]++;
+        g_can_tx_ok[motor_index]++;
     }
+}
 
-    g_can_tx_index++;
+/* ==================== TIM6中断回调：ID1/ID2立即连续发送，ID3延迟0.5ms后发送 ==================== */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM6) return;
+    if (!g_can_tx_pending) return;
 
-    if (g_can_tx_index >= 3) {
-        /* 3帧全部发完 */
+    if (g_can_tx_index == 0) {
+        /* 第一次触发：立即发送ID1和ID2，重置延迟计数，等待0.5ms后发ID3 */
+        CAN_SendFrame(0);
+        CAN_SendFrame(1);
+        g_can_tx_delay_cnt = 0;
+        g_can_tx_index = 2;
+    } else if (g_can_tx_index == 2) {
+        /* 累计0.1ms×5=0.5ms后发送ID3 */
+        g_can_tx_delay_cnt++;
+        if (g_can_tx_delay_cnt < 5) return;
+
+        CAN_SendFrame(2);
         g_can_tx_pending = 0;
 
         if (!g_can_tx_error) {
