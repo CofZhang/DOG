@@ -164,7 +164,7 @@ def input_motors_interactive() -> list:
     print("请依次输入12个电机的控制参数")
     print("=" * 60)
     for i in range(12):
-        print(f"\n--- 电机 {i+1} ---")
+        print(f"\n--- 电机 {i+1} ---") 
         kp  = _input_float(f"  KP  (0 ~ 500):          ", KP_MIN,  KP_MAX)
         kd  = _input_float(f"  KD  (0 ~ 5):             ", KD_MIN,  KD_MAX)
         pos = _input_float(f"  位置 (-12.5 ~ 12.5 rad): ", POS_MIN, POS_MAX)

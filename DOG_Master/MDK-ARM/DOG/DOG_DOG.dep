@@ -48,7 +48,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
-F (..\Core\Src\Led_indicator.c)(0x69FDE755)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\led_indicator.o --omf_browse dog\led_indicator.crf --depend dog\led_indicator.d)
+F (..\Core\Src\Led_indicator.c)(0x6A0D8187)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\led_indicator.o --omf_browse dog\led_indicator.crf --depend dog\led_indicator.d)
 I (../Core/Inc/Led_indicator.h)(0x69FB3DA6)
 I (../Core/Inc/main.h)(0x69FC9032)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69B52D45)
@@ -145,13 +145,13 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
 I (../Core/Inc/fdcan.h)(0x69C64226)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/spi.h)(0x69C64228)
 I (../Core/Inc/led_indicator.h)(0x69FB3DA6)
 I (../Core/Inc/led.h)(0x69FC8694)
 I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
 F (..\Core\Src\motor.c)(0x6A072629)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\motor.o --omf_browse dog\motor.crf --depend dog\motor.d)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/main.h)(0x69FC9032)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69B52D45)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x69FB46BC)
@@ -248,7 +248,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/fdcan.h)(0x69C64226)
 I (../Core/Inc/spi.h)(0x69C64228)
 I (../USB_DEVICE/App/usbd_cdc_if.h)(0x69F0A8A7)
@@ -261,7 +261,7 @@ I (D:\AA_Keil5\ARM\ARMCC\include\stdlib.h)(0x5E8E3CC2)
 I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h)(0x69B52D13)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x69B52D13)
-F (..\Core\Src\u_spi.c)(0x6A0724CE)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\u_spi.o --omf_browse dog\u_spi.crf --depend dog\u_spi.d)
+F (..\Core\Src\u_spi.c)(0x6A0EC836)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\u_spi.o --omf_browse dog\u_spi.crf --depend dog\u_spi.d)
 I (../Core/Inc/u_spi.h)(0x6A0724E3)
 I (../Core/Inc/main.h)(0x69FC9032)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69B52D45)
@@ -309,12 +309,13 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
 I (../Core/Inc/spi.h)(0x69C64228)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/fdcan.h)(0x69C64226)
 I (../Core/Inc/usbcol.h)(0x69FC9596)
+I (../Core/Inc/motor_calib.h)(0x6A0EC80A)
 I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
-F (..\Core\Src\system_control.c)(0x6A0D7EB7)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\system_control.o --omf_browse dog\system_control.crf --depend dog\system_control.d)
-I (../Core/Inc/system_control.h)(0x69FB3CC3)
+F (..\Core\Src\system_control.c)(0x6A0ECF91)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\system_control.o --omf_browse dog\system_control.crf --depend dog\system_control.d)
+I (../Core/Inc/system_control.h)(0x6A0ECF8A)
 I (../Core/Inc/main.h)(0x69FC9032)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69B52D45)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x69FB46BC)
@@ -360,7 +361,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/fdcan.h)(0x69C64226)
 I (../Core/Inc/spi.h)(0x69C64228)
 I (../Core/Inc/usbcol.h)(0x69FC9596)
@@ -369,6 +370,58 @@ I (../Core/Inc/fdcan_handler.h)(0x69FB3E84)
 I (../Core/Inc/led_indicator.h)(0x69FB3DA6)
 I (../Core/Inc/led.h)(0x69FC8694)
 I (../Core/Inc/tim.h)(0x6A0C2930)
+I (../Core/Inc/motor_calib.h)(0x6A0EC80A)
+I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
+F (..\Core\Src\motor_calib.c)(0x6A0EC824)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\motor_calib.o --omf_browse dog\motor_calib.crf --depend dog\motor_calib.d)
+I (../Core/Inc/motor_calib.h)(0x6A0EC80A)
+I (../Core/Inc/main.h)(0x69FC9032)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69B52D45)
+I (../Core/Inc/stm32h7xx_hal_conf.h)(0x69FB46BC)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h)(0x69B52D45)
+I (../Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7xx.h)(0x69B52D45)
+I (../Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h743xx.h)(0x69B52D45)
+I (../Drivers/CMSIS/Include/core_cm7.h)(0x69B52D19)
+I (D:\AA_Keil5\ARM\ARMCC\include\stdint.h)(0x5E8E3CC2)
+I (../Drivers/CMSIS/Include/cmsis_version.h)(0x69B52D19)
+I (../Drivers/CMSIS/Include/cmsis_compiler.h)(0x69B52D19)
+I (../Drivers/CMSIS/Include/cmsis_armcc.h)(0x69B52D19)
+I (../Drivers/CMSIS/Include/mpu_armv7.h)(0x69B52D19)
+I (../Drivers/CMSIS/Device/ST/STM32H7xx/Include/system_stm32h7xx.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h)(0x69B52D45)
+I (D:\AA_Keil5\ARM\ARMCC\include\stddef.h)(0x5E8E3CC2)
+I (D:\AA_Keil5\ARM\ARMCC\include\math.h)(0x5E8E3CC2)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mdma.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_exti.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cortex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_adc.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_fdcan.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hsem.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h)(0x69B52D45)
+I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
+I (../Core/Inc/fdcan.h)(0x69C64226)
+I (../Core/Inc/spi.h)(0x69C64228)
 I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
 F (../Core/Src/main.c)(0x6A0C2932)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\main.o --omf_browse dog\main.crf --depend dog\main.d)
 I (../Core/Inc/main.h)(0x69FC9032)
@@ -430,8 +483,8 @@ I (D:\AA_Keil5\ARM\ARMCC\include\stdlib.h)(0x5E8E3CC2)
 I (D:\AA_Keil5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
 I (../Core/Inc/gpio.h)(0x69C64226)
 I (../Core/Inc/led.h)(0x69FC8694)
-I (../Core/Inc/system_control.h)(0x69FB3CC3)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/system_control.h)(0x6A0ECF8A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/usbcol.h)(0x69FC9596)
 I (../Core/Inc/u_spi.h)(0x6A0724E3)
 I (../Core/Inc/Led_indicator.h)(0x69FB3DA6)
@@ -1028,7 +1081,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h)(0x69B52D45)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h)(0x69B52D13)
 I (../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h)(0x69B52D13)
 I (../Core/Inc/usbcol.h)(0x69FC9596)
-I (../Core/Inc/motor.h)(0x6A07248A)
+I (../Core/Inc/motor.h)(0x6A0EC7FA)
 I (../Core/Inc/fdcan.h)(0x69C64226)
 I (../Core/Inc/spi.h)(0x69C64228)
 F (../USB_DEVICE/Target/usbd_conf.c)(0x69F0A8A6)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32H743xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H743xx-o dog\usbd_conf.o --omf_browse dog\usbd_conf.crf --depend dog\usbd_conf.d)

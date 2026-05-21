@@ -7,6 +7,7 @@
 "dog\usbcol.o"
 "dog\u_spi.o"
 "dog\system_control.o"
+"dog\motor_calib.o"
 "dog\main.o"
 "dog\gpio.o"
 "dog\adc.o"

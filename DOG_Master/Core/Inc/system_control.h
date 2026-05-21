@@ -55,6 +55,13 @@ void System_SendFeedback(void);
  */
 SystemState System_GetState(void);
 
+/**
+ * @brief 查询指定电机是否掉线
+ * @param motor_idx 电机索引（0~11）
+ * @return 1=掉线，0=正常
+ */
+uint8_t System_IsMotorOffline(uint8_t motor_idx);
+
 #ifdef __cplusplus
 }
 #endif

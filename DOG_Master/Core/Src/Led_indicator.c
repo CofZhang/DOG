@@ -25,7 +25,7 @@ static uint32_t g_heartbeat_counter = 0;
 /* ==================== LED指示初始化 ==================== */
 void LED_Indicator_Init(void)
 {
-    /* 清空所有状态 */
+    /* 清空所有状态 */ 
     memset(g_led_blink_counter, 0, sizeof(g_led_blink_counter));
     memset(g_led_blink_duration, 0, sizeof(g_led_blink_duration));
     memset(g_error_level, 0, sizeof(g_error_level));

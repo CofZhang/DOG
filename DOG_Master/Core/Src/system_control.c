@@ -9,6 +9,7 @@
 #include "led_indicator.h"
 #include "u_spi.h"
 #include "tim.h"
+#include "motor_calib.h"
 #include <string.h>
 
 /* ==================== 私有变量 ==================== */
@@ -31,6 +32,12 @@ static uint32_t g_feedback_counter = 0;
 volatile uint32_t g_can_tx_ok[3] = {0};
 volatile uint32_t g_can_tx_fail[3] = {0};
 
+/* 电机掉线检测：连续未收到反馈的次数（每次 SendFeedback 检查一次） */
+#define MOTOR_OFFLINE_THRESHOLD  20     /* 连续失败超过此次数认为掉线 */
+static uint8_t  g_motor_offline_cnt[USB_PKG_MOTOR_CNT] = {0};  /* 各电机连续无反馈计数 */
+static uint8_t  g_motor_offline[USB_PKG_MOTOR_CNT] = {0};      /* 各电机掉线标志 */
+static uint32_t g_last_feedback_ts[USB_PKG_MOTOR_CNT] = {0};   /* 上次检测时的时间戳快照 */
+
 /* TIM6驱动的CAN发送状态 */
 static volatile uint8_t g_can_tx_index = 0;    /* 当前待发电机索引 0~2 */
 static volatile uint8_t g_can_tx_pending = 0;  /* 是否有待发任务 */
@@ -40,6 +47,11 @@ static uint8_t g_can_tx_data[3][8];            /* 预打包的3帧CAN数据 */
 
 /* 外部FDCAN句柄（在fdcan.c中定义） */
 extern FDCAN_HandleTypeDef hfdcan1;
+
+/* 私有函数前向声明 */
+static void CAN_SendFrame(uint8_t motor_index);
+static void System_BootCalibSample(void);
+static void System_CheckMotorOffline(void);
 
 /* ==================== 系统初始化 ==================== */
 void System_Control_Init(void)
@@ -57,11 +69,17 @@ void System_Control_Init(void)
     memset(g_motor_params, 0, sizeof(g_motor_params));
     memset(g_motor_feedback, 0, sizeof(g_motor_feedback));
 
+    /* 初始化电机校准模块（从Flash加载偏移量，开始上电位置采样） */
+    Motor_Calib_Init();
+
     /* 启动TIM6，用于CAN帧间1ms延迟 */
     HAL_TIM_Base_Start_IT(&htim6);
 
     /* 设置系统状态为空闲 */
     g_system_state = SYS_STATE_IDLE;
+
+    /* 主动发控制帧触发电机反馈，完成上电位置采样（独立于USB数据流） */
+    System_BootCalibSample();
 }
 
 /* ==================== 系统主循环处理 ==================== */
@@ -107,7 +125,9 @@ void System_ProcessMotorControl(void)
     while (g_can_tx_pending);
 
     for (int i = 0; i < 3; i++) {
-        Motor_PackControlData(&g_motor_params[i], g_can_tx_data[i]);
+        MotorControlParam param = g_motor_params[i];
+        Motor_Calib_ApplyTransform(i, &param);
+        Motor_PackControlData(&param, g_can_tx_data[i]);
     }
 
     /* 触发TIM6驱动的发送序列：从电机1开始 */
@@ -138,6 +158,63 @@ static void CAN_SendFrame(uint8_t motor_index)
         g_can_tx_error = 1;
     } else {
         g_can_tx_ok[motor_index]++;
+    }
+}
+
+/* ==================== 上电启动采样：主动发控制帧触发电机反馈 ==================== */
+/* 采样超时：最多等待 BOOT_SAMPLE_TIMEOUT_MS 毫秒，防止电机未连接时卡死 */
+#define BOOT_SAMPLE_TIMEOUT_MS  5000U
+#define BOOT_SAMPLE_INTERVAL_MS 20U    /* 每轮发帧间隔，给电机足够时间回复 */
+
+static void System_BootCalibSample(void)
+{
+    /* 构造零扭矩查询帧：kp/velocity/torque=0，kd取最小非零值避免电机拒帧 */
+    MotorControlParam query_param;
+    query_param.kp       = 0.0f;
+    query_param.kd       = 0.1f;
+    query_param.position = 0.0f;
+    query_param.velocity = 0.0f;
+    query_param.torque   = 0.0f;
+
+    /* 预打包电机1-3的CAN数据 */
+    for (int i = 0; i < 3; i++) {
+        Motor_PackControlData(&query_param, g_can_tx_data[i]);
+    }
+
+    /* 构造12个电机的零扭矩参数（用于SPI发送电机4-12） */
+    MotorControlParam query_params[USB_PKG_MOTOR_CNT];
+    for (int i = 0; i < USB_PKG_MOTOR_CNT; i++) {
+        query_params[i] = query_param;
+    }
+
+    uint32_t start_tick = HAL_GetTick();
+
+    while (Motor_Calib_GetState() == CALIB_STATE_COLLECTING ||
+           Motor_Calib_GetState() == CALIB_STATE_CALIBRATING)
+    {
+        /* 超时保护：电机未连接时不卡死，直接跳过采样进入READY */
+        if (HAL_GetTick() - start_tick > BOOT_SAMPLE_TIMEOUT_MS) {
+            break;
+        }
+
+        /* 发送电机1-3控制帧（直接写FDCAN FIFO，不经过TIM6延迟机制） */
+        CAN_SendFrame(0);
+        CAN_SendFrame(1);
+        HAL_Delay(1);   /* 给ID3留出0.5ms以上间隔，与正常发送逻辑一致 */
+        CAN_SendFrame(2);
+
+        /* 发送电机4-12控制帧（SPI全双工，同时接收上一轮从机反馈） */
+        SPI_SendMotorControl(query_params, 0);
+
+        /* 等待电机回复反馈帧（FDCAN中断会自动更新g_motor_feedback） */
+        HAL_Delay(BOOT_SAMPLE_INTERVAL_MS);
+
+        /* 收集本轮反馈 */
+        MotorFeedback feedback[USB_PKG_MOTOR_CNT];
+        FDCAN_GetAllMotorFeedback(feedback);
+        SPI_GetSlaveFeedback(&feedback[3]);
+
+        Motor_Calib_FeedSample(feedback);
     }
 }
 
@@ -179,12 +256,57 @@ void System_SendFeedback(void)
     /* 获取从机 SPI 收到的电机4-12反馈，合并到索引3-11 */
     SPI_GetSlaveFeedback(&g_motor_feedback[3]);
 
+    /* 电机掉线检测 */
+    System_CheckMotorOffline();
+
     /* 通过USB发送12个电机的完整反馈数据 */
     Protocol_SendFeedback(g_motor_feedback, g_sequence);
+}
+
+/* ==================== 电机掉线检测 ==================== */
+static void System_CheckMotorOffline(void)
+{
+    uint8_t any_offline = 0;
+
+    for (int i = 0; i < USB_PKG_MOTOR_CNT; i++) {
+        uint32_t ts = g_motor_feedback[i].timestamp;
+
+        if (ts == g_last_feedback_ts[i] || ts == 0) {
+            /* 时间戳未更新：本轮未收到该电机反馈 */
+            if (g_motor_offline_cnt[i] < MOTOR_OFFLINE_THRESHOLD) {
+                g_motor_offline_cnt[i]++;
+            }
+            if (g_motor_offline_cnt[i] >= MOTOR_OFFLINE_THRESHOLD) {
+                g_motor_offline[i] = 1;
+            }
+        } else {
+            /* 时间戳有更新：通信正常，清除计数 */
+            g_motor_offline_cnt[i] = 0;
+            g_motor_offline[i] = 0;
+        }
+
+        g_last_feedback_ts[i] = ts;
+
+        if (g_motor_offline[i]) {
+            any_offline = 1;
+        }
+    }
+
+    if (any_offline) {
+        LED_Indicator_BeepAlarm(0);   /* 持续鸣叫，直到所有电机恢复 */
+    } else {
+        LED_Indicator_BeepStop();
+    }
 }
 
 /* ==================== 系统状态管理 ==================== */
 SystemState System_GetState(void)
 {
     return g_system_state;
+}
+
+uint8_t System_IsMotorOffline(uint8_t motor_idx)
+{
+    if (motor_idx >= USB_PKG_MOTOR_CNT) return 0;
+    return g_motor_offline[motor_idx];
 }

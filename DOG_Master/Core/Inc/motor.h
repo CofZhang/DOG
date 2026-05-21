@@ -50,6 +50,39 @@ extern "C" {
 /* 从控FDCAN的CAN ID基数 */
 #define MOTOR_SLAVE_ID_BASE   0x00
 
+/* ==================== 电机旋转方向配置 ==================== */
+/* +1 = 正转（电机正方向与关节正方向一致）
+ * -1 = 反转（电机正方向与关节正方向相反）
+ * 待实测后按实际情况修改 */
+#define MOTOR_DIR_1      1
+#define MOTOR_DIR_2      1
+#define MOTOR_DIR_3      1
+#define MOTOR_DIR_4      1
+#define MOTOR_DIR_5      1
+#define MOTOR_DIR_6      1
+#define MOTOR_DIR_7      1
+#define MOTOR_DIR_8      1
+#define MOTOR_DIR_9      1
+#define MOTOR_DIR_10     1
+#define MOTOR_DIR_11     1
+#define MOTOR_DIR_12     1
+
+/* ==================== 电机减速比配置 ==================== */
+/* 减速比 = 电机转速 / 关节转速，例如减速比6表示电机转6圈关节转1圈
+ * 待确认后按实际情况修改 */
+#define MOTOR_RATIO_1    1.0f
+#define MOTOR_RATIO_2    1.0f
+#define MOTOR_RATIO_3    1.0f
+#define MOTOR_RATIO_4    1.0f
+#define MOTOR_RATIO_5    1.0f
+#define MOTOR_RATIO_6    1.0f
+#define MOTOR_RATIO_7    1.0f
+#define MOTOR_RATIO_8    1.0f
+#define MOTOR_RATIO_9    1.0f
+#define MOTOR_RATIO_10   1.0f
+#define MOTOR_RATIO_11   1.0f
+#define MOTOR_RATIO_12   1.0f
+
 /* ==================== USB数据包定义 ==================== */
 #define USB_PKG_HEADER       0xAA    // USB帧头标识
 #define USB_PKG_FOOTER       0x55    // USB帧尾标识

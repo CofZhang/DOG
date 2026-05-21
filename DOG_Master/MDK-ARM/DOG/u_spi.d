@@ -50,4 +50,5 @@ dog\u_spi.o: ../Core/Inc/spi.h
 dog\u_spi.o: ../Core/Inc/motor.h
 dog\u_spi.o: ../Core/Inc/fdcan.h
 dog\u_spi.o: ../Core/Inc/usbcol.h
+dog\u_spi.o: ../Core/Inc/motor_calib.h
 dog\u_spi.o: D:\AA_Keil5\ARM\ARMCC\Bin\..\include\string.h

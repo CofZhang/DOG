@@ -430,6 +430,11 @@
               <FilePath>..\Core\Src\system_control.c</FilePath>
             </File>
             <File>
+              <FileName>motor_calib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\motor_calib.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>

@@ -6,6 +6,7 @@
 
 #include "u_spi.h"
 #include "usbcol.h"
+#include "motor_calib.h"
 #include <string.h>
 
 /* ==================== 私有变量 ==================== */
@@ -56,8 +57,10 @@ uint16_t SPI_PackMotorData(const MotorControlParam motor_params[12], uint8_t seq
     uint8_t *motor_data_ptr = tx_buffer + SPI_PKG_HEADER_LEN;
 
     for (int i = 0; i < SPI_PKG_MOTOR_CNT; i++) {
-        /* 从motor_params[3]开始取数据（电机4），打包到SPI缓冲区 */
-        Motor_PackControlData(&motor_params[i + 3], motor_data_ptr + i * 8);
+        /* 从motor_params[3]开始取数据（电机4），应用关节→电机空间变换后打包 */
+        MotorControlParam param = motor_params[i + 3];
+        Motor_Calib_ApplyTransform(i + 3, &param);
+        Motor_PackControlData(&param, motor_data_ptr + i * 8);
     }
 
     /* 计算校验和（从字节0到数据结束，异或校验） */
