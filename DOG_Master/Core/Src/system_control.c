@@ -264,6 +264,121 @@ void System_SendFeedback(void)
 }
 
 /* ==================== 电机掉线检测 ==================== */
+
+/*
+ * 每组LED闪烁编码规则：
+ *   组内第1个电机掉线 → 闪1次
+ *   组内第2个电机掉线 → 闪2次
+ *   组内第3个电机掉线 → 闪3次
+ *   多个电机同时掉线  → 依次轮流显示各掉线电机的闪烁次数
+ *   全组恢复正常      → LED熄灭
+ *
+ * 时序（单个周期）：
+ *   [亮150ms 灭150ms] × N次  →  停顿500ms  →  下一个掉线电机  →  停顿1000ms  →  重复
+ */
+
+/* 单组LED闪烁状态机 */
+typedef enum {
+    BLINK_IDLE = 0,     /* 无掉线，LED熄灭 */
+    BLINK_ON,           /* 当前闪烁脉冲：亮 */
+    BLINK_OFF,          /* 当前闪烁脉冲：灭 */
+    BLINK_MOTOR_GAP,    /* 同组内两个掉线电机之间的停顿 */
+    BLINK_CYCLE_GAP,    /* 一轮显示结束后的长停顿 */
+} BlinkState;
+
+typedef struct {
+    BlinkState state;
+    uint32_t   tick;        /* 当前状态进入时间 */
+    uint8_t    pulse_cnt;   /* 当前电机还需闪烁的次数 */
+    uint8_t    motor_idx;   /* 当前正在显示的组内电机索引（0/1/2） */
+} GroupBlink;
+
+/* 4组LED各自的状态机 */
+static GroupBlink g_blink[4];
+
+/* 根据掉线标志推进单组状态机，控制对应LED */
+static void Blink_Update(GroupBlink *b, const uint8_t offline[3],
+                         void (*led_on)(void), void (*led_off)(void))
+{
+    uint32_t now = HAL_GetTick();
+
+    /* 收集本组掉线电机列表（最多3个） */
+    uint8_t list[3];
+    uint8_t cnt = 0;
+    for (uint8_t i = 0; i < 3; i++) {
+        if (offline[i]) list[cnt++] = i + 1;  /* 存组内位置1/2/3 */
+    }
+
+    if (cnt == 0) {
+        /* 全组正常：熄灭，重置状态机 */
+        led_off();
+        b->state = BLINK_IDLE;
+        return;
+    }
+
+    switch (b->state) {
+        case BLINK_IDLE:
+            /* 有掉线：从第一个掉线电机开始 */
+            b->motor_idx = 0;
+            b->pulse_cnt = list[0];  /* 闪烁次数 = 组内位置编号 */
+            b->tick = now;
+            b->state = BLINK_ON;
+            led_on();
+            break;
+
+        case BLINK_ON:
+            if (now - b->tick >= 150) {
+                led_off();
+                b->pulse_cnt--;
+                b->tick = now;
+                b->state = BLINK_OFF;
+            }
+            break;
+
+        case BLINK_OFF:
+            if (now - b->tick >= 150) {
+                if (b->pulse_cnt > 0) {
+                    /* 还有脉冲：继续亮 */
+                    led_on();
+                    b->tick = now;
+                    b->state = BLINK_ON;
+                } else {
+                    /* 本电机闪完：进入电机间停顿或周期停顿 */
+                    b->motor_idx++;
+                    if (b->motor_idx < cnt) {
+                        b->tick = now;
+                        b->state = BLINK_MOTOR_GAP;
+                    } else {
+                        b->tick = now;
+                        b->state = BLINK_CYCLE_GAP;
+                    }
+                }
+            }
+            break;
+
+        case BLINK_MOTOR_GAP:
+            if (now - b->tick >= 500) {
+                /* 开始显示下一个掉线电机 */
+                b->pulse_cnt = list[b->motor_idx];
+                b->tick = now;
+                b->state = BLINK_ON;
+                led_on();
+            }
+            break;
+
+        case BLINK_CYCLE_GAP:
+            if (now - b->tick >= 1000) {
+                /* 重新从第一个掉线电机开始新一轮 */
+                b->motor_idx = 0;
+                b->pulse_cnt = list[0];
+                b->tick = now;
+                b->state = BLINK_ON;
+                led_on();
+            }
+            break;
+    }
+}
+
 static void System_CheckMotorOffline(void)
 {
     uint8_t any_offline = 0;
@@ -285,26 +400,20 @@ static void System_CheckMotorOffline(void)
 
         g_last_feedback_ts[i] = ts;
 
-        if (g_motor_offline[i]) {
-            any_offline = 1;
-        }
+        if (g_motor_offline[i]) any_offline = 1;
     }
 
-    /* LED5：电机1-3（索引0-2）掉线指示 */
-    uint8_t offline_1_3 = g_motor_offline[0] || g_motor_offline[1] || g_motor_offline[2];
-    if (offline_1_3) { LED5_On(); } else { LED5_Off(); }
+    /* LED5：电机1-3（索引0-2） */
+    Blink_Update(&g_blink[0], &g_motor_offline[0], LED5_On, LED5_Off);
 
-    /* LED6：电机4-6（索引3-5）掉线指示 */
-    uint8_t offline_4_6 = g_motor_offline[3] || g_motor_offline[4] || g_motor_offline[5];
-    if (offline_4_6) { LED6_On(); } else { LED6_Off(); }
+    /* LED6：电机4-6（索引3-5） */
+    Blink_Update(&g_blink[1], &g_motor_offline[3], LED6_On, LED6_Off);
 
-    /* LED7：电机7-9（索引6-8）掉线指示 */
-    uint8_t offline_7_9 = g_motor_offline[6] || g_motor_offline[7] || g_motor_offline[8];
-    if (offline_7_9) { LED7_On(); } else { LED7_Off(); }
+    /* LED7：电机7-9（索引6-8） */
+    Blink_Update(&g_blink[2], &g_motor_offline[6], LED7_On, LED7_Off);
 
-    /* LED8：电机10-12（索引9-11）掉线指示 */
-    uint8_t offline_10_12 = g_motor_offline[9] || g_motor_offline[10] || g_motor_offline[11];
-    if (offline_10_12) { LED8_On(); } else { LED8_Off(); }
+    /* LED8：电机10-12（索引9-11） */
+    Blink_Update(&g_blink[3], &g_motor_offline[9], LED8_On, LED8_Off);
 
     /* 蜂鸣器：任意电机掉线则0.5s间歇报警 */
     if (any_offline) {
