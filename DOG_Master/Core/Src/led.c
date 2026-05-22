@@ -43,7 +43,7 @@ void Buzzer_Beep(uint16_t freq)
 		return;
 	}
 	
-	uint32_t tmr_clk = 1000000;  // 1MHz 计数时钟（根据240MHz APB2计算得出）
+	uint32_t tmr_clk = 500000;   // 500kHz 计数时钟（120MHz APB2 / (239+1) = 500kHz）
 	uint32_t period = tmr_clk / freq - 1;
 	uint32_t duty = period / 2;   // 50%占空比，声音最大
 	

@@ -124,7 +124,9 @@ int main(void)
   System_Control_Init();
 
     /* 启动成功，蜂鸣器短鸣一声 */
-  LED_Indicator_BeepAlarm(200);
+    BEEP_On();
+    HAL_Delay(200);
+    BEEP_Off();
 
   /* USER CODE END 2 */
 

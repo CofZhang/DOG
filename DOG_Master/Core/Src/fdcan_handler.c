@@ -104,15 +104,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
                     /* 标记数据已更新 */
                     g_feedback_updated[index] = 1;
-
-                    /* LED指示：收到电机反馈 */
-                    LED_Indicator_Trigger(LED_IND_MOTOR_FEEDBACK);
-
-                    /* 检查电机错误码 */
-                    if (g_motor_feedback[index].error_code != 0) {
-                        /* 电机报错，设置错误指示 */
-                        LED_Indicator_SetError(LED_IND_FDCAN_ERROR, ERROR_LEVEL_WARNING);
-                    }
                 }
             }
         }

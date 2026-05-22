@@ -56,4 +56,5 @@ dog\system_control.o: ../Core/Inc/led_indicator.h
 dog\system_control.o: ../Core/Inc/led.h
 dog\system_control.o: ../Core/Inc/tim.h
 dog\system_control.o: ../Core/Inc/motor_calib.h
+dog\system_control.o: ../Core/Inc/tim_delay.h
 dog\system_control.o: D:\AA_Keil5\ARM\ARMCC\Bin\..\include\string.h

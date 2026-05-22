@@ -103,8 +103,9 @@ static int Calib_FlashWrite(const CalibData *calib)
     #define CALIB_FLASH_WORD_SIZE  32U   /* 256位 = 32字节 */
     uint32_t blocks = (sizeof(CalibData) + CALIB_FLASH_WORD_SIZE - 1) / CALIB_FLASH_WORD_SIZE;
 
-    /* 对齐缓冲区（32字节对齐，不足部分填0xFF） */
-    __attribute__((aligned(32))) uint8_t aligned_buf[CALIB_FLASH_WORD_SIZE * 4];
+    /* 对齐缓冲区（32字节对齐，不足部分填0xFF）
+     * 使用 static 确保编译器将其放在 BSS 段，支持32字节对齐（栈上不支持超过8字节对齐） */
+    static __attribute__((aligned(32))) uint8_t aligned_buf[CALIB_FLASH_WORD_SIZE * 4];
     memset(aligned_buf, 0xFF, sizeof(aligned_buf));
     memcpy(aligned_buf, calib, sizeof(CalibData));
 

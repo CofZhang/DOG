@@ -4,15 +4,15 @@
  * @note 提供系统状态的可视化和声音指示
  *
  * LED指示定义：
- * - LED1: 系统运行指示（心跳，1Hz闪烁）
- * - LED2: USB通信指示（接收数据时闪烁）
- * - LED3: SPI通信指示（发送数据时闪烁）
- * - LED4: FDCAN1通信指示（发送数据时闪烁）
- * - LED5: 电机反馈正常指示（收到反馈时闪烁）
- * - LED6: USB错误指示（常亮表示错误）
- * - LED7: SPI错误指示（常亮表示错误）
- * - LED8: FDCAN错误指示（常亮表示错误）
- * - BEEP: 严重错误报警（连续鸣叫）
+ * - LED1: 系统心跳（1Hz闪烁，系统正常运行）
+ * - LED2: USB数据接收指示（每收到一包闪一次）
+ * - LED3: CAN发送指示（每发送成功一次闪一次）
+ * - LED4: SPI发送指示（每发送成功一次闪一次）
+ * - LED5: 电机1-3掉线报错（常亮）
+ * - LED6: 电机4-6掉线报错（常亮）
+ * - LED7: 电机7-9掉线报错（常亮）
+ * - LED8: 电机10-12掉线报错（常亮）
+ * - BEEP: 电机掉线报警（0.5s间歇鸣叫）
  */
 
 #ifndef __LED_INDICATOR_H
@@ -23,16 +23,11 @@
 
 /* ==================== LED指示类型定义 ==================== */
 typedef enum {
-    LED_IND_SYSTEM_HEARTBEAT = 0,   // 系统心跳
-    LED_IND_USB_RX,                 // USB接收
-    LED_IND_USB_TX,                 // USB发送
-    LED_IND_SPI_TX,                 // SPI发送
-    LED_IND_FDCAN_TX,               // FDCAN发送
-    LED_IND_MOTOR_FEEDBACK,         // 电机反馈
-    LED_IND_USB_ERROR,              // USB错误
-    LED_IND_SPI_ERROR,              // SPI错误
-    LED_IND_FDCAN_ERROR,            // FDCAN错误
-    LED_IND_CRITICAL_ERROR          // 严重错误（蜂鸣器）
+    LED_IND_SYSTEM_HEARTBEAT = 0,   // LED1：系统心跳
+    LED_IND_USB_RX,                 // LED2：USB数据接收
+    LED_IND_FDCAN_TX,               // LED3：CAN发送
+    LED_IND_SPI_TX,                 // LED4：SPI发送
+    LED_IND_COUNT                   // 枚举计数（保持在末尾）
 } LED_IndicatorType;
 
 /* ==================== 错误级别定义 ==================== */

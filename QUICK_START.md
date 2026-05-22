@@ -631,7 +631,7 @@ Flash 写入失败。检查：
 
 #### 报警行为
 
-- 任意一个电机掉线 → **蜂鸣器持续鸣叫**
+- 任意一个电机掉线 → **蜂鸣器以0.5s为周期间歇鸣叫**（响0.5s → 停0.5s → 循环）
 - 所有掉线电机恢复通信 → 蜂鸣器自动停止
 
 掉线和恢复均为自动检测，无需人工干预。
@@ -657,7 +657,41 @@ System_IsMotorOffline(motor_idx);  // 0~11，返回1表示该电机掉线
 #define MOTOR_OFFLINE_THRESHOLD  20   /* 连续失败次数，可按需调整 */
 ```
 
-## 11. 技术支持
+报警闪烁间隔固定为 500ms，由 `Tim_IsElapsed()` 驱动，不阻塞主循环。
+
+## 11. 蜂鸣器说明
+
+### 11.1 硬件配置
+
+蜂鸣器由 TIM17 CH1（PB9）PWM 驱动，相关参数：
+
+| 参数 | 值 |
+|------|----|
+| TIM17 时钟源 | APB2（120MHz） |
+| Prescaler | 239（计数时钟 = 120MHz ÷ 240 = **500kHz**） |
+| 默认报警频率 | 1000Hz（`BEEP_On()` 调用 `Buzzer_Beep(1000)`） |
+
+### 11.2 蜂鸣器接口
+
+定义在 `DOG_Master/Core/Src/led.c`，声明在 `led.h`：
+
+```c
+void BEEP_On(void);              // 以1000Hz鸣叫
+void BEEP_Off(void);             // 停止
+void Buzzer_Beep(uint16_t freq); // 自定义频率（Hz），0=停止
+```
+
+### 11.3 常见问题
+
+**Q：蜂鸣器频率不对？**
+
+检查 `Buzzer_Beep()` 中的 `tmr_clk` 是否与实际计数时钟一致：
+
+```c
+uint32_t tmr_clk = 500000;  // 500kHz = 120MHz / (Prescaler+1)
+```
+
+若修改了 TIM17 的 Prescaler，需同步更新此值，否则实际频率会偏差。
 
 ### 11.1 文档
 
@@ -678,7 +712,115 @@ System_IsMotorOffline(motor_idx);  // 0~11，返回1表示该电机掉线
 - GitHub Issues
 - 电机厂商技术支持
 
-## 12. 下一步
+## 12. 非阻塞延迟工具（tim_delay）
+
+### 12.1 背景
+
+主循环中禁止使用 `HAL_Delay()`，否则会阻塞 USB 接收、SPI 发送等所有任务。`tim_delay` 模块提供两种延迟方式：
+
+| 函数 | 用途 |
+|------|------|
+| `Tim_Delay(ms)` | 阻塞式，仅用于初始化阶段 |
+| `Tim_IsElapsed(&t, ms)` | 非阻塞式，主循环中定时触发 |
+| `Tim_GetMs()` | 获取当前毫秒时间戳 |
+
+底层使用 SysTick 驱动的 `HAL_GetTick()`（1ms 精度），不占用额外硬件定时器。
+
+### 12.2 主循环用法
+
+```c
+#include "tim_delay.h"
+
+// while(1) 中
+static uint32_t t1 = 0;
+static uint32_t t2 = 0;
+
+if (Tim_IsElapsed(&t1, 10)) {
+    // 每10ms执行一次
+}
+
+if (Tim_IsElapsed(&t2, 500)) {
+    // 每500ms执行一次
+}
+```
+
+`Tim_IsElapsed()` 内部使用无符号减法，`HAL_GetTick()` 约49.7天溢出回绕时也能正确处理。
+
+## 13. 指示灯说明
+
+### 13.1 LED功能总览
+
+主控板共8个LED，功能如下：
+
+| LED | 引脚 | 功能 | 行为 |
+|-----|------|------|------|
+| LED1 | PB6 | 系统心跳 | 1Hz 闪烁，系统正常运行时持续闪烁 |
+| LED2 | PB7 | USB数据接收 | 每收到一包上位机数据亮 50ms |
+| LED3 | PB8 | CAN发送 | 每向电机1-3发送成功一次亮 30ms |
+| LED4 | PE0 | SPI发送 | 每向从控发送成功一次亮 30ms |
+| LED5 | PE1 | 电机1-3掉线 | 电机1、2、3中任意一个掉线时常亮 |
+| LED6 | PE2 | 电机4-6掉线 | 电机4、5、6中任意一个掉线时常亮 |
+| LED7 | PE3 | 电机7-9掉线 | 电机7、8、9中任意一个掉线时常亮 |
+| LED8 | PE4 | 电机10-12掉线 | 电机10、11、12中任意一个掉线时常亮 |
+
+### 13.2 上电自检流程
+
+系统上电后会依次点亮 LED1→LED2→...→LED8（每个亮200ms），然后蜂鸣器短鸣一声，最后所有LED同时亮500ms后熄灭。若某个LED在自检中不亮，说明该LED或其GPIO存在硬件问题。
+
+### 13.3 正常工作状态
+
+系统正常运行时，预期观察到：
+
+- **LED1**：稳定1Hz闪烁
+- **LED2**：上位机发送控制指令时快速闪烁（频率取决于上位机发包频率）
+- **LED3**：与LED2同步闪烁（CAN发送与USB接收联动）
+- **LED4**：与LED2同步闪烁（SPI发送与USB接收联动）
+- **LED5~LED8**：全部熄灭
+
+### 13.4 故障诊断
+
+| 现象 | 可能原因 |
+|------|----------|
+| LED1不闪烁 | 主循环卡死，检查是否有阻塞调用（如 `HAL_Delay`） |
+| LED2不亮 | USB未连接，或上位机未发送数据 |
+| LED3亮但LED2不亮 | 不可能，LED3由USB数据触发CAN发送驱动 |
+| LED4不亮但LED2亮 | SPI通信异常，检查主从控连线 |
+| LED5~LED8任意常亮 | 对应组电机掉线，同时蜂鸣器间歇报警 |
+| LED5~LED8全部常亮 | 所有电机掉线，检查CAN总线和电机供电 |
+
+### 13.5 相关代码位置
+
+| 功能 | 文件 |
+|------|------|
+| LED驱动（GPIO控制） | `DOG_Master/Core/Src/led.c` |
+| LED指示逻辑（闪烁处理） | `DOG_Master/Core/Src/Led_indicator.c` |
+| USB接收触发LED2 | `DOG_Master/Core/Src/usbcol.c` → `Protocol_ProcessRxData()` |
+| CAN发送触发LED3 | `DOG_Master/Core/Src/system_control.c` → `HAL_TIM_PeriodElapsedCallback()` |
+| SPI发送触发LED4 | `DOG_Master/Core/Src/system_control.c` → `System_ProcessMotorControl()` |
+| 掉线检测控制LED5~LED8 | `DOG_Master/Core/Src/system_control.c` → `System_CheckMotorOffline()` |
+
+## 14. 技术支持
+
+### 14.1 文档
+
+- `SYSTEM_DOCUMENTATION.md` - 完整系统文档
+- `README_SLAVE.md` - 从控制器说明
+- 代码注释
+
+### 14.2 调试工具
+
+- STM32CubeIDE调试器
+- 逻辑分析仪（SPI/CAN）
+- CAN分析仪
+- USB分析仪
+
+### 14.3 社区资源
+
+- STM32官方论坛
+- GitHub Issues
+- 电机厂商技术支持
+
+## 15. 下一步
 
 完成基础测试后，可以：
 

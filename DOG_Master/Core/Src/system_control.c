@@ -7,9 +7,11 @@
 #include "system_control.h"
 #include "fdcan_handler.h"
 #include "led_indicator.h"
+#include "led.h"
 #include "u_spi.h"
 #include "tim.h"
 #include "motor_calib.h"
+#include "tim_delay.h"
 #include <string.h>
 
 /* ==================== 私有变量 ==================== */
@@ -105,7 +107,6 @@ void System_ProcessMotorControl(void)
     ProtocolState state = Protocol_ReadPacket(g_motor_params, &g_sequence);
 
     if (state != PROTOCOL_STATE_COMPLETE) {
-        LED_Indicator_SetError(LED_IND_USB_ERROR, ERROR_LEVEL_WARNING);
         return;
     }
 
@@ -114,10 +115,9 @@ void System_ProcessMotorControl(void)
 
     /* ==================== 步骤1：通过SPI发送电机4-12的数据到从控 ==================== */
     if (SPI_SendMotorControl(g_motor_params, g_sequence) != 1) {
-        LED_Indicator_SetError(LED_IND_SPI_ERROR, ERROR_LEVEL_ERROR);
+        /* SPI发送失败，不触发LED4 */
     } else {
         LED_Indicator_Trigger(LED_IND_SPI_TX);
-        LED_Indicator_ClearError(LED_IND_SPI_ERROR);
     }
 
     /* ==================== 步骤2：预打包电机1-3的CAN数据，交由TIM6中断逐帧发送 ==================== */
@@ -240,10 +240,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
         if (!g_can_tx_error) {
             LED_Indicator_Trigger(LED_IND_FDCAN_TX);
-            LED_Indicator_ClearError(LED_IND_FDCAN_ERROR);
-        } else {
-            LED_Indicator_SetError(LED_IND_FDCAN_ERROR, ERROR_LEVEL_ERROR);
         }
+        /* CAN发送失败不做额外处理，掉线检测会通过反馈超时捕获 */
     }
 }
 
@@ -256,8 +254,10 @@ void System_SendFeedback(void)
     /* 获取从机 SPI 收到的电机4-12反馈，合并到索引3-11 */
     SPI_GetSlaveFeedback(&g_motor_feedback[3]);
 
-    /* 电机掉线检测 */
-    System_CheckMotorOffline();
+    /* 电机掉线检测：仅在收到过USB数据（系统运行中）后才检测，避免未连接电机时误报 */
+    if (g_system_state == SYS_STATE_RUNNING) {
+        System_CheckMotorOffline();
+    }
 
     /* 通过USB发送12个电机的完整反馈数据 */
     Protocol_SendFeedback(g_motor_feedback, g_sequence);
@@ -272,7 +272,6 @@ static void System_CheckMotorOffline(void)
         uint32_t ts = g_motor_feedback[i].timestamp;
 
         if (ts == g_last_feedback_ts[i] || ts == 0) {
-            /* 时间戳未更新：本轮未收到该电机反馈 */
             if (g_motor_offline_cnt[i] < MOTOR_OFFLINE_THRESHOLD) {
                 g_motor_offline_cnt[i]++;
             }
@@ -280,7 +279,6 @@ static void System_CheckMotorOffline(void)
                 g_motor_offline[i] = 1;
             }
         } else {
-            /* 时间戳有更新：通信正常，清除计数 */
             g_motor_offline_cnt[i] = 0;
             g_motor_offline[i] = 0;
         }
@@ -292,10 +290,32 @@ static void System_CheckMotorOffline(void)
         }
     }
 
+    /* LED5：电机1-3（索引0-2）掉线指示 */
+    uint8_t offline_1_3 = g_motor_offline[0] || g_motor_offline[1] || g_motor_offline[2];
+    if (offline_1_3) { LED5_On(); } else { LED5_Off(); }
+
+    /* LED6：电机4-6（索引3-5）掉线指示 */
+    uint8_t offline_4_6 = g_motor_offline[3] || g_motor_offline[4] || g_motor_offline[5];
+    if (offline_4_6) { LED6_On(); } else { LED6_Off(); }
+
+    /* LED7：电机7-9（索引6-8）掉线指示 */
+    uint8_t offline_7_9 = g_motor_offline[6] || g_motor_offline[7] || g_motor_offline[8];
+    if (offline_7_9) { LED7_On(); } else { LED7_Off(); }
+
+    /* LED8：电机10-12（索引9-11）掉线指示 */
+    uint8_t offline_10_12 = g_motor_offline[9] || g_motor_offline[10] || g_motor_offline[11];
+    if (offline_10_12) { LED8_On(); } else { LED8_Off(); }
+
+    /* 蜂鸣器：任意电机掉线则0.5s间歇报警 */
     if (any_offline) {
-        LED_Indicator_BeepAlarm(0);   /* 持续鸣叫，直到所有电机恢复 */
+        static uint32_t beep_tick = 0;
+        static uint8_t  beep_state = 0;
+        if (Tim_IsElapsed(&beep_tick, 500)) {
+            beep_state = !beep_state;
+            if (beep_state) { BEEP_On(); } else { BEEP_Off(); }
+        }
     } else {
-        LED_Indicator_BeepStop();
+        BEEP_Off();
     }
 }
 

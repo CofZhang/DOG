@@ -60,3 +60,5 @@ dog\usbcol.o: D:\AA_Keil5\ARM\ARMCC\Bin\..\include\string.h
 dog\usbcol.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h
 dog\usbcol.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
 dog\usbcol.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+dog\usbcol.o: ../Core/Inc/Led_indicator.h
+dog\usbcol.o: ../Core/Inc/led.h

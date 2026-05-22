@@ -18,6 +18,7 @@
 "dog\usart.o"
 "dog\stm32h7xx_it.o"
 "dog\stm32h7xx_hal_msp.o"
+"dog\tim_delay.o"
 "dog\usb_device.o"
 "dog\usbd_desc.o"
 "dog\usbd_cdc_if.o"

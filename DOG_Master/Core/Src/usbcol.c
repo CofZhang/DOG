@@ -6,6 +6,7 @@
 
 #include "usbcol.h"
 #include "usbd_cdc_if.h"
+#include "Led_indicator.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -330,6 +331,11 @@ uint16_t Protocol_ProcessRxData(const uint8_t *data, uint16_t len)
             g_rx_write_idx = (g_rx_write_idx + 1) % USB_RX_BUFFER_SIZE;
             processed++;
         }
+    }
+
+    /* 有数据写入则触发LED2闪烁 */
+    if (processed > 0) {
+        LED_Indicator_Trigger(LED_IND_USB_RX);
     }
 
     return processed;
