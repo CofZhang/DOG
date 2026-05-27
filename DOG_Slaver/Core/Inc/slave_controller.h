@@ -38,11 +38,12 @@ typedef enum {
 // 从控制器状态
 typedef struct {
     uint8_t initialized;                        // 初始化标志
-    volatile uint8_t spiRxComplete;                      // SPI接收完成标志
-    volatile uint8_t spiTxComplete;                      // SPI发送完成标志
+    volatile uint8_t spiRxComplete;             // SPI接收完成标志
+    volatile uint8_t spiTxComplete;             // SPI发送完成标志
     SPIPacket_t spiRxPacket;                    // SPI接收缓冲区
     SPIFeedbackPacket_t spiFeedbackPacket;      // SPI反馈缓冲区
     uint8_t motorFeedbackRaw[9][8];             // 9个电机原始反馈数据（8字节）
+    volatile uint16_t motorValidMask;           // 本轮收到反馈的电机位掩码（bit0=电机4，bit8=电机12）
     uint32_t lastRxTime;                        // 最后接收时间
     uint8_t sequence;                           // 序列号
 } SlaveController_t;

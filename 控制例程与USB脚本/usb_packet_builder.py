@@ -182,5 +182,5 @@ if __name__ == '__main__':
     print()
     print_usb_packet(pkt)
     print()
-    print("完整数据包（可直接复制）：")
+    print("完整数据包：")
     print(' '.join(f'{b:02X}' for b in pkt))

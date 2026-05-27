@@ -1,8 +1,8 @@
 Dependencies for Project 'DOG_G', Target 'DOG_G': (DO NOT MODIFY !)
 CompilerVersion: 5060960::V5.06 update 7 (build 960)::.\ARMCC
 F (startup_stm32g474xx.s)(0x6A0C2FC0)(--cpu Cortex-M4.fp.sp -g --apcs=interwork -I.\RTE\_DOG_G-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include--pd "__UVISION_VERSION SETA 543" --pd "STM32G474xx SETA 1" --pd "_RTE_ SETA 1"--list startup_stm32g474xx.lst --xref -o dog_g\startup_stm32g474xx.o --depend dog_g\startup_stm32g474xx.d)
-F (../Core/Src/slave_controller.c)(0x6A0C4F43)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG_G-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32G474xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G474xx-o dog_g\slave_controller.o --omf_browse dog_g\slave_controller.crf --depend dog_g\slave_controller.d)
-I (../Core/Inc/slave_controller.h)(0x6A0C2EBD)
+F (../Core/Src/slave_controller.c)(0x6A16A3ED)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG_G-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32G474xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G474xx-o dog_g\slave_controller.o --omf_browse dog_g\slave_controller.crf --depend dog_g\slave_controller.d)
+I (../Core/Inc/slave_controller.h)(0x6A16A3D8)
 I (../Core/Inc/main.h)(0x69C652F6)
 I (../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h)(0x69BD0872)
 I (../Core/Inc/stm32g4xx_hal_conf.h)(0x6A0C2FBF)
@@ -78,7 +78,7 @@ I (../Core/Inc/dma.h)(0x69C653FA)
 I (../Core/Inc/fdcan.h)(0x69C652F6)
 I (../Core/Inc/spi.h)(0x69C652F6)
 I (../Core/Inc/gpio.h)(0x69C652F6)
-I (../Core/Inc/slave_controller.h)(0x6A0C2EBD)
+I (../Core/Inc/slave_controller.h)(0x6A16A3D8)
 I (../Core/Inc/motor_protocol.h)(0x6A01E635)
 F (../Core/Src/gpio.c)(0x69C652F6)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc -I ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32G4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DOG_G-ID:\AA_Keil5\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="543" -DSTM32G474xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32G474xx-o dog_g\gpio.o --omf_browse dog_g\gpio.crf --depend dog_g\gpio.d)
 I (../Core/Inc/gpio.h)(0x69C652F6)

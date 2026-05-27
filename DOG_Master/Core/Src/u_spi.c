@@ -140,8 +140,15 @@ void SPI_TxCpltCallback(void)
 
     /* 解析9个电机反馈数据（从 Byte6 开始，每个电机8字节） */
     const uint8_t *motor_data_ptr = g_spi_rx_buffer + SPI_PKG_HEADER_LEN;
+    /* 读取从机上报的有效掩码：reserved[0]=bit0~7，reserved[1]=bit8 */
+    uint16_t valid_mask = (uint16_t)g_spi_rx_buffer[4] | ((uint16_t)(g_spi_rx_buffer[5] & 0x01) << 8);
+    uint32_t now = HAL_GetTick();
     for (int i = 0; i < SPI_PKG_MOTOR_CNT; i++) {
         Motor_UnpackFeedbackData(motor_data_ptr + i * 8, &g_slave_feedback[i]);
+        /* 只有本轮从机实际收到该电机反馈，才更新时间戳 */
+        if (valid_mask & (1u << i)) {
+            g_slave_feedback[i].timestamp = now;
+        }
     }
 }
 

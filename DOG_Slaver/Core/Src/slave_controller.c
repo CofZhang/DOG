@@ -214,14 +214,18 @@ void SlaveController_PrepareFeedbackPacket(void) {
     feedback->status = 0x00;  // 正常状态
     feedback->motorCnt = 9;
     feedback->sequence = g_slaveCtrl.sequence;
-    feedback->reserved[0] = 0x00;
-    feedback->reserved[1] = 0x00;
+    // reserved[0] = valid_mask 低8位（电机4-11），reserved[1] = valid_mask 第9位（电机12）
+    feedback->reserved[0] = (uint8_t)(g_slaveCtrl.motorValidMask & 0xFF);
+    feedback->reserved[1] = (uint8_t)((g_slaveCtrl.motorValidMask >> 8) & 0x01);
 
     // 复制电机反馈数据（在FDCAN接收中断中更新）
     memcpy(feedback->motorFeedback, g_slaveCtrl.motorFeedbackRaw, sizeof(feedback->motorFeedback));
 
     // 计算校验和（对 Byte 0~77 共78字节异或）
     feedback->checksum = CalculateChecksum((uint8_t*)feedback, sizeof(SPIFeedbackPacket_t) - 2);
+
+    // 清零valid_mask，为下一轮采集做准备
+    g_slaveCtrl.motorValidMask = 0;
 }
 
 /**
@@ -315,6 +319,8 @@ void SlaveController_FDCAN_RxCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFi
                 if (MOTOR_ID_MAP[i] == motorId) {
                     // 保存原始反馈数据（8字节）
                     memcpy(g_slaveCtrl.motorFeedbackRaw[i], rxData, 8);
+                    // 标记本轮该电机收到了有效反馈
+                    g_slaveCtrl.motorValidMask |= (1u << i);
                     break;
                 }
             }

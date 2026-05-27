@@ -36,9 +36,12 @@ volatile uint32_t g_can_tx_fail[3] = {0};
 
 /* 电机掉线检测：连续未收到反馈的次数（每次 SendFeedback 检查一次） */
 #define MOTOR_OFFLINE_THRESHOLD  20     /* 连续失败超过此次数认为掉线 */
-static uint8_t  g_motor_offline_cnt[USB_PKG_MOTOR_CNT] = {0};  /* 各电机连续无反馈计数 */
-static uint8_t  g_motor_offline[USB_PKG_MOTOR_CNT] = {0};      /* 各电机掉线标志 */
-static uint32_t g_last_feedback_ts[USB_PKG_MOTOR_CNT] = {0};   /* 上次检测时的时间戳快照 */
+#define MOTOR_ONLINE_GRACE_MS    3000   /* 系统进入RUNNING后的宽限期（ms），期间不报从未在线的电机 */
+static uint8_t  g_motor_offline_cnt[USB_PKG_MOTOR_CNT] = {0};
+static uint8_t  g_motor_offline[USB_PKG_MOTOR_CNT] = {0};
+static uint32_t g_last_feedback_ts[USB_PKG_MOTOR_CNT] = {0};
+static uint8_t  g_motor_ever_online[USB_PKG_MOTOR_CNT] = {0};  /* 是否曾经收到过反馈 */
+static uint32_t g_running_start_tick = 0;                       /* 进入RUNNING状态的时间 */
 
 /* TIM6驱动的CAN发送状态 */
 static volatile uint8_t g_can_tx_index = 0;    /* 当前待发电机索引 0~2 */
@@ -110,7 +113,10 @@ void System_ProcessMotorControl(void)
         return;
     }
 
-    /* 设置系统状态为运行中 */
+    /* 设置系统状态为运行中（仅第一次进入时记录宽限期起始时间） */
+    if (g_system_state != SYS_STATE_RUNNING) {
+        g_running_start_tick = HAL_GetTick();
+    }
     g_system_state = SYS_STATE_RUNNING;
 
     /* ==================== 步骤1：通过SPI发送电机4-12的数据到从控 ==================== */
@@ -265,7 +271,7 @@ void System_SendFeedback(void)
 
 /* ==================== 电机掉线检测 ==================== */
 
-/*
+/* 
  * 每组LED闪烁编码规则：
  *   组内第1个电机掉线 → 闪1次
  *   组内第2个电机掉线 → 闪2次
@@ -279,7 +285,7 @@ void System_SendFeedback(void)
 
 /* 单组LED闪烁状态机 */
 typedef enum {
-    BLINK_IDLE = 0,     /* 无掉线，LED熄灭 */
+    BLINK_IDLE = 0,     /* 无掉线，LED熄灭 */ 
     BLINK_ON,           /* 当前闪烁脉冲：亮 */
     BLINK_OFF,          /* 当前闪烁脉冲：灭 */
     BLINK_MOTOR_GAP,    /* 同组内两个掉线电机之间的停顿 */
@@ -383,20 +389,27 @@ static void System_CheckMotorOffline(void)
 {
     uint8_t any_offline = 0;
 
+    /* 宽限期结束后，从未在线的电机也视为掉线 */
+    uint8_t grace_over = (HAL_GetTick() - g_running_start_tick) >= MOTOR_ONLINE_GRACE_MS;
+
     for (int i = 0; i < USB_PKG_MOTOR_CNT; i++) {
         uint32_t ts = g_motor_feedback[i].timestamp;
 
-        if (ts == g_last_feedback_ts[i] || ts == 0) {
+        if (ts != 0 && ts != g_last_feedback_ts[i]) {
+            /* 时间戳有更新：通信正常 */
+            g_motor_ever_online[i] = 1;
+            g_motor_offline_cnt[i] = 0;
+            g_motor_offline[i] = 0;
+        } else if (g_motor_ever_online[i] || grace_over) {
+            /* 曾经在线 或 宽限期已过：累积掉线计数 */
             if (g_motor_offline_cnt[i] < MOTOR_OFFLINE_THRESHOLD) {
                 g_motor_offline_cnt[i]++;
             }
             if (g_motor_offline_cnt[i] >= MOTOR_OFFLINE_THRESHOLD) {
                 g_motor_offline[i] = 1;
             }
-        } else {
-            g_motor_offline_cnt[i] = 0;
-            g_motor_offline[i] = 0;
         }
+        /* 宽限期内且从未在线：不计入掉线 */
 
         g_last_feedback_ts[i] = ts;
 
